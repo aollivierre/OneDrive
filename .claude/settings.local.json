@@ -2,7 +2,7 @@
   "$schema": "https://schemas.placeholders.dev/claude-local-settings.json",
   "permissions": {
     "allow": [
-      "Bash(git rebase:*)"
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }
