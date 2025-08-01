@@ -52,16 +52,16 @@ param(
     [string]$TenantID,
     
     [Parameter()]
-    [bool]$RemediationMode = $false,
+    [switch]$RemediationMode,
     
     [Parameter()]
-    [bool]$IncludeDownloadsFolder = $true,
+    [switch]$IncludeDownloadsFolder,
     
     [Parameter()]
-    [bool]$CopyFolderContents = $false,
+    [switch]$CopyFolderContents,
     
     [Parameter()]
-    [bool]$CreateVBSWrapper = $false,
+    [switch]$CreateVBSWrapper,
     
     [Parameter()]
     [string]$LogPath = "C:\ProgramData\OneDriveRemediation"
@@ -803,7 +803,7 @@ function Enable-FilesOnDemand {
 function Enable-DownloadsFolderRedirection {
     Write-Log "Enabling Downloads folder redirection"
     
-    if (!$IncludeDownloadsFolder) {
+    if (-not $IncludeDownloadsFolder) {
         Write-Log "Downloads folder redirection skipped by parameter"
         return $true
     }
@@ -936,7 +936,7 @@ function Start-OneDriveIfNotRunning {
 function Create-VBSWrapper {
     Write-Log "Creating VBS wrapper for silent execution"
     
-    if (!$CreateVBSWrapper) {
+    if (-not $CreateVBSWrapper) {
         Write-Log "VBS wrapper creation skipped by parameter"
         return
     }
@@ -1086,7 +1086,7 @@ function Main {
         $script:ExitCode = 1
     }
     
-    if ($IncludeDownloadsFolder -and !$script:DetectionResults.DownloadsFolderRedirected -and !$script:DetectionResults.RunningAsSystem) {
+    if ($IncludeDownloadsFolder.IsPresent -and !$script:DetectionResults.DownloadsFolderRedirected -and !$script:DetectionResults.RunningAsSystem) {
         $remediationReasons += "Downloads folder not redirected"
         $remediationNeeded = $true
         $script:ExitCode = 1
@@ -1136,7 +1136,7 @@ function Main {
         }
         
         # Enable Downloads folder redirection
-        if ($IncludeDownloadsFolder -and !$script:DetectionResults.DownloadsFolderRedirected -and !$script:DetectionResults.RunningAsSystem) {
+        if ($IncludeDownloadsFolder.IsPresent -and !$script:DetectionResults.DownloadsFolderRedirected -and !$script:DetectionResults.RunningAsSystem) {
             if (!(Enable-DownloadsFolderRedirection)) {
                 $remediationSuccess = $false
             }
