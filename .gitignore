@@ -1,0 +1,89 @@
+# Windows PowerShell
+*.ps1xml
+*.psc1
+*.psd1.bak
+*.psm1.bak
+*.ps1.bak
+
+# Logs
+*.log
+logs/
+Logs/
+*.transcript
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# OneDrive specific
+OneDriveLib.dll
+ODSyncUtilStatus.json
+OneDriveLogging.txt
+UserFilesBackupStatus.json
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Credentials and secrets
+*.key
+*.pfx
+*.cer
+credentials.txt
+secrets.json
+tokens.json
+
+# Test results
+TestResults/
+test-results/
+*.trx
+
+# Build outputs
+bin/
+obj/
+out/
+build/
+
+# Package files
+*.nupkg
+*.snupkg
+packages/
+
+# Backup files
+*.bak
+*.backup
+*.old
+backup/
+
+# Cache
+.cache/
+cache/
+
+# Documentation build
+docs/_build/
+docs/_site/
+
+# OS generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Custom
+/create-github-repo.ps1
+github_token.txt
+pat_token.txt
