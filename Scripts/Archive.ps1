@@ -1,5 +1,5 @@
 # Create GitHub repository
-$token = "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"
+$token = "github_pat_"
 $headers = @{
     "Authorization" = "Bearer $token"
     "Accept" = "application/vnd.github.v3+json"
