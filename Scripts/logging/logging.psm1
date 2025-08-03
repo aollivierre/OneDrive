@@ -364,7 +364,7 @@ function Write-AppDeploymentLog {
         } elseif ($global:CustomLogBase) { 
             $global:CustomLogBase 
         } else { 
-            "C:\ProgramData\Win11Scheduler\Logs" 
+            "$env:ProgramData\UniversalLogs" 
         }
         $fullLogDirectory = Join-Path -Path $logDirectory -ChildPath $dateFolder
         $fullLogDirectory = Join-Path -Path $fullLogDirectory -ChildPath $parentScriptName
