@@ -3,7 +3,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [switch]$EnableDebug = $false
+    [switch]$EnableDebug = $false,
+    
+    [Parameter(Mandatory = $false)]
+    [switch]$ConfigurationOnly = $false
 )
 
 <#
@@ -18,9 +21,14 @@ param(
     0 = Properly configured (no remediation needed)
     1 = Remediation required
     
+.PARAMETER ConfigurationOnly
+    When specified, returns success (0) if OneDrive is not installed.
+    Use this in environments where OneDrive deployment is handled separately.
+    
 .NOTES
-    Version: 1.0
+    Version: 1.1
     Author: OneDrive RMM Detection
+    For production use, consider -ConfigurationOnly parameter
 #>
 
 # Set strict mode for better error handling
@@ -326,10 +334,34 @@ try {
     }
     
     if (-not $oneDriveFound) {
-        Write-DetectionLog -Message "OneDrive is NOT installed" -Level 'ERROR'
-        $script:outputData.OneDrive_Status = "NOT_CONFIGURED"
-        $script:outputData.OneDrive_Reason = "OneDrive not installed"
-        $script:exitCode = 1
+        if ($ConfigurationOnly) {
+            Write-DetectionLog -Message "OneDrive is NOT installed - ConfigurationOnly mode, skipping detection" -Level 'INFO'
+            $script:outputData.OneDrive_Status = "NOT_APPLICABLE"
+            $script:outputData.OneDrive_Reason = "OneDrive not installed - configuration not applicable"
+            $script:exitCode = 0  # Success - nothing to configure
+            
+            # Output results and exit early
+            Write-ConnectWiseOutput -Data $script:outputData
+            Write-DetectionLog -Message "Detection completed with exit code: $script:exitCode" -Level 'INFO'
+            
+            # Cleanup logging
+            if ($script:LoggingEnabled) {
+                try {
+                    Stop-UniversalTranscript -ErrorAction SilentlyContinue
+                }
+                catch {
+                    # Ignore transcript errors
+                }
+            }
+            
+            exit $script:exitCode
+        }
+        else {
+            Write-DetectionLog -Message "OneDrive is NOT installed" -Level 'ERROR'
+            $script:outputData.OneDrive_Status = "NOT_CONFIGURED"
+            $script:outputData.OneDrive_Reason = "OneDrive not installed"
+            $script:exitCode = 1
+        }
     }
     
     # 2. Check if OneDrive is Running

@@ -7,8 +7,11 @@ These scripts configure OneDrive for optimal disk space usage in preparation for
 
 ### 1. Detect-OneDriveConfiguration-RMM.ps1
 - **Purpose**: Detects current OneDrive configuration state
+- **Parameters**:
+  - `-ConfigurationOnly`: Returns success if OneDrive not installed (nothing to configure)
+  - `-EnableDebug`: Enable verbose logging for troubleshooting
 - **Exit Codes**: 
-  - 0 = Properly configured
+  - 0 = Properly configured (or not applicable in ConfigurationOnly mode)
   - 1 = Remediation needed
 - **Checks**:
   - OneDrive installation
@@ -37,12 +40,17 @@ These scripts configure OneDrive for optimal disk space usage in preparation for
 For production environments where OneDrive is pre-installed with Windows:
 
 ```powershell
-# Detection - no parameters needed
-powershell.exe -ExecutionPolicy Bypass -File Detect-OneDriveConfiguration-RMM.ps1
+# Detection - configuration only mode
+powershell.exe -ExecutionPolicy Bypass -File Detect-OneDriveConfiguration-RMM.ps1 -ConfigurationOnly
 
 # Remediation - configuration only, no download/install
 powershell.exe -ExecutionPolicy Bypass -File Remediate-OneDriveConfiguration-RMM.ps1 -ConfigurationOnly
 ```
+
+In ConfigurationOnly mode:
+- Detection returns success (0) if OneDrive not installed
+- Remediation exits with error (1) if OneDrive not installed
+- No downloads or installations are attempted
 
 ### ConnectWise Automate
 1. Create Detection script:
