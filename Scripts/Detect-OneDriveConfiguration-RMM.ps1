@@ -47,16 +47,10 @@ $script:outputData = @{
 }
 
 #region Logging Module Configuration
-# Import logging module - use local copy
+# Import logging module - use local copy only
 $LoggingModulePath = Join-Path $PSScriptRoot "logging\logging.psm1"
 $script:LoggingEnabled = $false
 $script:LoggingMode = if ($EnableDebug) { 'EnableDebug' } else { 'SilentMode' }
-
-# Try alternate path if local doesn't exist
-if (-not (Test-Path $LoggingModulePath)) {
-    # Try Win11Scheduler path as fallback
-    $LoggingModulePath = Join-Path $PSScriptRoot "..\..\Win11UpgradeScheduler\Win11Detection\src\logging\logging.psm1"
-}
 
 if (Test-Path $LoggingModulePath) {
     try {
