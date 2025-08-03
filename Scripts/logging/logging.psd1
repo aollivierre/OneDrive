@@ -12,7 +12,7 @@
 RootModule = 'logging.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.2.0'
+ModuleVersion = '3.0.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -130,6 +130,20 @@ PrivateData = @{
 
         # ReleaseNotes of this module
         ReleaseNotes = @'
+## Version 3.0.0 - 2025-08-03
+### BREAKING CHANGES
+- Removed ALL hardcoded paths and application-specific references
+- Default base path changed to generic $env:ProgramData\UniversalLogs
+- Network logging path must now be explicitly configured via Initialize-Logging
+
+### Added
+- NetworkLogPath parameter to Initialize-Logging for optional centralized logging
+- Truly universal - no more Win11Scheduler or SCCM server references
+
+### Fixed
+- Module is now genuinely application-agnostic as originally intended
+- All paths are fully configurable with sensible generic defaults
+
 ## Version 2.2.0 - 2025-08-03
 ### Changed
 - Simplified logging levels to short, clear names:

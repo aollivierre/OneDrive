@@ -16,7 +16,7 @@
     - Configurable - All paths and names are customizable
     
 .NOTES
-    Version:        2.2.0
+    Version:        3.0.0
     Author:         System Administrator
     Creation Date:  2024-01-01
     Last Modified:  2025-08-02
@@ -36,19 +36,19 @@
     # Example 1: Use in a backup script
     Import-Module .\logging.psm1
     Initialize-Logging -BaseLogPath "D:\BackupLogs" -JobName "DailyBackup" -ParentScriptName "Backup-Database"
-    Write-AppDeploymentLog -Message "Backup started" -Level "Information"
+    Write-AppDeploymentLog -Message "Backup started" -Level "INFO"
     
 .EXAMPLE
     # Example 2: Use in an installation script
     Import-Module .\logging.psm1
     Initialize-Logging -BaseLogPath "$env:TEMP\Install" -JobName "AppInstaller" -ParentScriptName "Install-Software"
-    Write-AppDeploymentLog -Message "Installation beginning" -Level "Information"
+    Write-AppDeploymentLog -Message "Installation beginning" -Level "INFO"
     
 .EXAMPLE
-    # Example 3: Use in a monitoring tool
+    # Example 3: Use in a monitoring tool with network logging
     Import-Module .\logging.psm1
-    Initialize-Logging -BaseLogPath "C:\Monitoring\Logs" -JobName "ServerMonitor" -ParentScriptName "Monitor-Services"
-    Write-AppDeploymentLog -Message "Monitoring check started" -Level "Information"
+    Initialize-Logging -BaseLogPath "C:\Monitoring\Logs" -JobName "ServerMonitor" -ParentScriptName "Monitor-Services" -NetworkLogPath "\\CentralServer\Logs"
+    Write-AppDeploymentLog -Message "Monitoring check started" -Level "INFO"
     
 .EXAMPLE
     # Example 4: Extend with custom wrapper
@@ -79,11 +79,12 @@ $script:ModuleDescription = 'Universal PowerShell Logging Module with Line Numbe
 
 # Global configuration variables for the logging module
 $script:LogConfig = @{
-    BaseLogPath = "C:\ProgramData\Win11Scheduler\Logs"  # Default path
+    BaseLogPath = "$env:ProgramData\UniversalLogs"  # Generic default path
     JobName = "DefaultJob"
     ParentScriptName = "DefaultScript"
     CustomLogPath = $null
     Initialized = $false
+    NetworkLogPath = $null  # Optional network path for centralized logging
 }
 
 function Initialize-Logging {
@@ -108,7 +109,11 @@ function Initialize-Logging {
         Optional: Full custom log file path (overrides automatic path generation)
     
     .EXAMPLE
-        Initialize-Logging -BaseLogPath "C:\ProgramData\Win11Scheduler\Logs\Detection" -JobName "Win11Detection" -ParentScriptName "Win11_Detection_ConnectWise"
+        Initialize-Logging -BaseLogPath "C:\ProgramData\MyApp\Logs" -JobName "DataProcessing" -ParentScriptName "Process-CustomerData"
+    
+    .EXAMPLE
+        # With network logging
+        Initialize-Logging -BaseLogPath "C:\Logs\Local" -JobName "Backup" -ParentScriptName "Backup-Database" -NetworkLogPath "\\FileServer\CentralLogs"
     #>
     [CmdletBinding()]
     param(
@@ -122,7 +127,10 @@ function Initialize-Logging {
         [string]$ParentScriptName,
         
         [Parameter(Mandatory = $false)]
-        [string]$CustomLogPath = $null
+        [string]$CustomLogPath = $null,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$NetworkLogPath = $null
     )
     
     # Update configuration
@@ -130,6 +138,7 @@ function Initialize-Logging {
     $script:LogConfig.JobName = $JobName
     $script:LogConfig.ParentScriptName = $ParentScriptName
     $script:LogConfig.CustomLogPath = $CustomLogPath
+    $script:LogConfig.NetworkLogPath = $NetworkLogPath
     $script:LogConfig.Initialized = $true
     
     # Set global variables for backward compatibility
@@ -392,11 +401,16 @@ function Write-AppDeploymentLog {
     # Network logging: Only save CSV format logs under a parent job folder for better organization
     try {
         $hostname = $env:COMPUTERNAME
-        $jobName = "Detection"  # Parent job folder name
-        $networkBasePath = "\\AZR1PSCCM02\.logs\$jobName\$hostname"
-        
-        # Test network connectivity first
-        $networkAvailable = Test-Path "\\AZR1PSCCM02\.logs" -ErrorAction SilentlyContinue
+        $jobName = $script:LogConfig.JobName  # Use configured job name
+        # Only try network logging if NetworkLogPath is configured
+        if ($script:LogConfig.NetworkLogPath) {
+            $networkBasePath = Join-Path $script:LogConfig.NetworkLogPath "$jobName\$hostname"
+            
+            # Test network connectivity first
+            $networkAvailable = Test-Path $script:LogConfig.NetworkLogPath -ErrorAction SilentlyContinue
+        } else {
+            $networkAvailable = $false
+        }
         
         if ($networkAvailable) {
             # Use session-based paths if available
@@ -510,7 +524,7 @@ function Write-AppDeploymentLog {
             $dateFolder = Get-Date -Format "yyyy-MM-dd"
             $timestamp = Get-Date -Format "yyyy-MM-dd-HH-mm-ss"
             
-            $csvLogDirectory = "C:\ProgramData\Win11Scheduler\Logs\CSV"
+            $csvLogDirectory = Join-Path $script:LogConfig.BaseLogPath "CSV"
             $fullCSVDirectory = Join-Path -Path $csvLogDirectory -ChildPath $dateFolder
             $fullCSVDirectory = Join-Path -Path $fullCSVDirectory -ChildPath $parentScriptName
             $csvFileName = "$($userContext.ComputerName)-$callingScript-$($userContext.UserType)-$($userContext.UserName)-$parentScriptName-activity-$timestamp.csv"
@@ -867,7 +881,7 @@ function Get-CallingScriptName {
 function Start-UniversalTranscript {
     [CmdletBinding()]
     param(
-        [string]$LogDirectory = "C:\ProgramData\Win11Scheduler\Logs",
+        [string]$LogDirectory = $script:LogConfig.BaseLogPath,
         [string]$LoggingMode = "SilentMode"
     )
     
