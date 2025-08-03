@@ -17,7 +17,8 @@ param(
     [string]$LogPath = "$env:TEMP\OneDrive-Remediation-$(Get-Date -Format 'yyyyMMdd-HHmmss').log",
     [string]$DetectionResultsPath = "$env:TEMP\OneDrive-Detection-Results.json",
     [string]$TenantId = "336dbee2-bd39-4116-b305-3105539e416f",
-    [int]$StorageSenseDays = 30  # Days before converting files to online-only
+    [int]$StorageSenseDays = 30,  # Days before converting files to online-only
+    [switch]$EnableDebug = $false  # Enable console output for testing
 )
 
 # Initialize
@@ -33,14 +34,17 @@ function Write-RemediationLog {
     $logMessage = "$timestamp [$Level] $Message"
     Add-Content -Path $LogPath -Value $logMessage -Force -ErrorAction SilentlyContinue
     
-    if ($Level -eq "ERROR") {
-        Write-Host $Message -ForegroundColor Red
-    } elseif ($Level -eq "WARNING") {
-        Write-Host $Message -ForegroundColor Yellow
-    } elseif ($Level -eq "SUCCESS") {
-        Write-Host $Message -ForegroundColor Green
-    } else {
-        Write-Host $Message
+    # Only write to console if debug is enabled or it's an error
+    if ($EnableDebug -or $Level -eq "ERROR") {
+        if ($Level -eq "ERROR") {
+            Write-Host $Message -ForegroundColor Red
+        } elseif ($Level -eq "WARNING") {
+            Write-Host $Message -ForegroundColor Yellow
+        } elseif ($Level -eq "SUCCESS") {
+            Write-Host $Message -ForegroundColor Green
+        } else {
+            Write-Host $Message
+        }
     }
 }
 

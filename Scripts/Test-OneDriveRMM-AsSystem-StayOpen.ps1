@@ -70,6 +70,9 @@ Write-Host ""
 if (`$global:EnableDebug) {
     Write-Host "Running $TestType script WITH DEBUG LOGGING..." -ForegroundColor Cyan
     Write-Host "Debug mode enabled globally: `$(`$global:EnableDebug)" -ForegroundColor Gray
+    if ('$TestType' -eq 'Remediation') {
+        Write-Host "Note: Remediation script will only show errors in console (all logs go to file)" -ForegroundColor Gray
+    }
     & '$ScriptToTest' -EnableDebug
 } else {
     Write-Host "Running $TestType script in PRODUCTION MODE (No Debug)..." -ForegroundColor Yellow

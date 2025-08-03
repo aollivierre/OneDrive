@@ -138,16 +138,17 @@ function Write-DetectionLog {
             # Logging failed, continue
         }
     }
-    
-    # Only write to console if debug enabled (RMM should see clean output only)
-    if ($EnableDebug) {
-        $color = switch ($Level) {
-            'Error' { 'Red' }
-            'Warning' { 'Yellow' }
-            'Debug' { 'Gray' }
-            default { 'White' }
+    else {
+        # Only write to console if logging module is not available AND debug is enabled
+        if ($EnableDebug) {
+            $color = switch ($Level) {
+                'Error' { 'Red' }
+                'Warning' { 'Yellow' }
+                'Debug' { 'Gray' }
+                default { 'White' }
+            }
+            Write-Host "[$Level] $Message" -ForegroundColor $color
         }
-        Write-Host $Message -ForegroundColor $color
     }
 }
 
