@@ -27,23 +27,108 @@ $script:exitCode = 0
 $script:remediationSuccess = $true
 $script:supportsDownloadsKFM = $false
 
-# Logging function
+#region Logging Module Configuration
+# Import logging module
+$LoggingModulePath = Join-Path $PSScriptRoot "..\..\Win11UpgradeScheduler\Win11Detection\src\logging\logging.psm1"
+$script:LoggingEnabled = $false
+$script:LoggingMode = if ($EnableDebug) { 'EnableDebug' } else { 'SilentMode' }
+
+# Try alternate path if main path doesn't exist
+if (-not (Test-Path $LoggingModulePath)) {
+    # Try local logging folder
+    $LoggingModulePath = Join-Path $PSScriptRoot "logging\logging.psm1"
+}
+
+if (Test-Path $LoggingModulePath) {
+    try {
+        if ($EnableDebug) {
+            Write-Host "[DEBUG] Found logging module at: $LoggingModulePath" -ForegroundColor Cyan
+        }
+        
+        Import-Module $LoggingModulePath -Force -WarningAction SilentlyContinue
+        $script:LoggingEnabled = $true
+        
+        if ($EnableDebug) {
+            Write-Host "[DEBUG] Logging module imported successfully" -ForegroundColor Cyan
+            Write-Host "[DEBUG] LoggingMode: $script:LoggingMode" -ForegroundColor Cyan
+        }
+        
+        # Initialize logging
+        Initialize-Logging -BaseLogPath "C:\ProgramData\OneDriveRemediation\Logs" `
+                          -JobName "OneDriveRemediation" `
+                          -ParentScriptName "Remediate-OneDriveConfiguration-RMM"
+        
+        # Set global EnableDebug for logging module
+        $global:EnableDebug = $EnableDebug
+        
+        if ($EnableDebug) {
+            Write-Host "[DEBUG] Logging initialized. Global EnableDebug = $($global:EnableDebug)" -ForegroundColor Cyan
+        }
+        
+        Write-AppDeploymentLog -Message "OneDrive Remediation Script Started" -Level "Information" -Mode $script:LoggingMode
+        Write-AppDeploymentLog -Message "Computer: $env:COMPUTERNAME" -Level "Information" -Mode $script:LoggingMode
+        Write-AppDeploymentLog -Message "Running as: $env:USERNAME" -Level "Information" -Mode $script:LoggingMode
+        Write-AppDeploymentLog -Message "Tenant ID: $TenantId" -Level "Information" -Mode $script:LoggingMode
+        Write-AppDeploymentLog -Message "Storage Sense Days: $StorageSenseDays" -Level "Information" -Mode $script:LoggingMode
+    }
+    catch {
+        $script:LoggingEnabled = $false
+        if ($EnableDebug) {
+            Write-Host "[DEBUG ERROR] Logging initialization failed: $_" -ForegroundColor Red
+            Write-Host "[DEBUG ERROR] Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
+        }
+    }
+}
+else {
+    if ($EnableDebug) {
+        Write-Host "[DEBUG WARNING] Logging module not found at: $LoggingModulePath" -ForegroundColor Yellow
+    }
+}
+#endregion
+
+# Logging function wrapper
 function Write-RemediationLog {
-    param($Message, $Level = "INFO")
-    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    $logMessage = "$timestamp [$Level] $Message"
-    Add-Content -Path $LogPath -Value $logMessage -Force -ErrorAction SilentlyContinue
+    param(
+        [string]$Message, 
+        [string]$Level = "INFO"
+    )
     
-    # Only write to console if debug is enabled or it's an error
-    if ($EnableDebug -or $Level -eq "ERROR") {
-        if ($Level -eq "ERROR") {
-            Write-Host $Message -ForegroundColor Red
-        } elseif ($Level -eq "WARNING") {
-            Write-Host $Message -ForegroundColor Yellow
-        } elseif ($Level -eq "SUCCESS") {
-            Write-Host $Message -ForegroundColor Green
-        } else {
-            Write-Host $Message
+    # Map legacy levels to standard levels
+    $standardLevel = switch ($Level) {
+        "SUCCESS" { "Information" }
+        "INFO" { "Information" }
+        "WARNING" { "Warning" }
+        "ERROR" { "Error" }
+        default { "Information" }
+    }
+    
+    if ($script:LoggingEnabled) {
+        try {
+            # Force EnableDebug mode if global debug is set
+            $actualMode = if ($global:EnableDebug) { 'EnableDebug' } else { $script:LoggingMode }
+            Write-AppDeploymentLog -Message $Message -Level $standardLevel -Mode $actualMode
+        }
+        catch {
+            # Logging failed, fall back to simple logging
+        }
+    }
+    else {
+        # Fallback logging if module not available
+        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        $logMessage = "$timestamp [$Level] $Message"
+        Add-Content -Path $LogPath -Value $logMessage -Force -ErrorAction SilentlyContinue
+        
+        # Only write to console if debug is enabled or it's an error
+        if ($EnableDebug -or $Level -eq "ERROR") {
+            if ($Level -eq "ERROR") {
+                Write-Host $Message -ForegroundColor Red
+            } elseif ($Level -eq "WARNING") {
+                Write-Host $Message -ForegroundColor Yellow
+            } elseif ($Level -eq "SUCCESS") {
+                Write-Host $Message -ForegroundColor Green
+            } else {
+                Write-Host $Message
+            }
         }
     }
 }
@@ -107,10 +192,13 @@ function Configure-StorageSense {
     }
 }
 
-Write-RemediationLog "Starting OneDrive configuration remediation with Storage Sense"
-Write-RemediationLog "Running as: $env:USERNAME"
-Write-RemediationLog "Tenant ID: $TenantId"
-Write-RemediationLog "Storage Sense Days: $StorageSenseDays"
+# These are already logged by the logging module initialization above
+if (-not $script:LoggingEnabled) {
+    Write-RemediationLog "Starting OneDrive configuration remediation with Storage Sense"
+    Write-RemediationLog "Running as: $env:USERNAME"
+    Write-RemediationLog "Tenant ID: $TenantId"
+    Write-RemediationLog "Storage Sense Days: $StorageSenseDays"
+}
 
 try {
     # Load detection results if available
@@ -357,7 +445,21 @@ catch {
 }
 
 Write-RemediationLog "`nRemediation completed. Exit code: $script:exitCode"
-Write-RemediationLog "Log saved to: $LogPath"
+
+# Only log path if not using logging module (which saves to its own location)
+if (-not $script:LoggingEnabled) {
+    Write-RemediationLog "Log saved to: $LogPath"
+}
+
+# Cleanup logging
+if ($script:LoggingEnabled) {
+    try {
+        Stop-UniversalTranscript -ErrorAction SilentlyContinue
+    }
+    catch {
+        # Ignore transcript errors
+    }
+}
 
 # Return exit code for RMM
 exit $script:exitCode
