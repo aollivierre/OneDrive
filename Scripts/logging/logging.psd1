@@ -12,7 +12,7 @@
 RootModule = 'logging.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.1.0'
+ModuleVersion = '2.2.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -130,6 +130,17 @@ PrivateData = @{
 
         # ReleaseNotes of this module
         ReleaseNotes = @'
+## Version 2.2.0 - 2025-08-03
+### Changed
+- Simplified logging levels to short, clear names:
+  - Information → INFO
+  - Warning → WARNING  
+  - Error → ERROR
+  - Debug → DEBUG
+  - Success → SUCCESS
+- All scripts now use consistent uppercase short levels
+- Enhanced mapper supports both old and new names for compatibility
+
 ## Version 2.1.0 - 2025-08-03
 ### Added
 - Support for 'Success' logging level

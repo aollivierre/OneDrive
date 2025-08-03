@@ -90,12 +90,12 @@ if (Test-Path $LoggingModulePath) {
             Write-Host "[DEBUG TEST] Global EnableDebug: $($global:EnableDebug)" -ForegroundColor Yellow
         }
         
-        Write-AppDeploymentLog -Message "OneDrive Detection Script Started" -Level "Information" -Mode $script:LoggingMode
-        Write-AppDeploymentLog -Message "Computer: $env:COMPUTERNAME" -Level "Information" -Mode $script:LoggingMode
+        Write-AppDeploymentLog -Message "OneDrive Detection Script Started" -Level "INFO" -Mode $script:LoggingMode
+        Write-AppDeploymentLog -Message "Computer: $env:COMPUTERNAME" -Level "INFO" -Mode $script:LoggingMode
         
         # Get user context
         $userContext = Get-CurrentUser
-        Write-AppDeploymentLog -Message "User: $($userContext.UserName) (Type: $($userContext.UserType))" -Level "Information" -Mode $script:LoggingMode
+        Write-AppDeploymentLog -Message "User: $($userContext.UserName) (Type: $($userContext.UserType))" -Level "INFO" -Mode $script:LoggingMode
         
         if ($EnableDebug) {
             Write-Host "[DEBUG] First log messages written" -ForegroundColor Cyan
@@ -120,8 +120,8 @@ else {
 function Write-DetectionLog {
     param(
         [string]$Message,
-        [ValidateSet('Information', 'Warning', 'Error', 'Debug')]
-        [string]$Level = 'Information'
+        [ValidateSet('INFO', 'WARNING', 'ERROR', 'DEBUG')]
+        [string]$Level = 'INFO'
     )
     
     # Get the calling line number
@@ -142,9 +142,9 @@ function Write-DetectionLog {
         # Only write to console if logging module is not available AND debug is enabled
         if ($EnableDebug) {
             $color = switch ($Level) {
-                'Error' { 'Red' }
-                'Warning' { 'Yellow' }
-                'Debug' { 'Gray' }
+                'ERROR' { 'Red' }
+                'WARNING' { 'Yellow' }
+                'DEBUG' { 'Gray' }
                 default { 'White' }
             }
             Write-Host "[$Level] $Message" -ForegroundColor $color
@@ -164,16 +164,16 @@ function Write-DetectionError {
         $errorMessage += " | ScriptStackTrace: $($ErrorRecord.ScriptStackTrace)"
     }
     
-    Write-DetectionLog -Message $errorMessage -Level 'Error'
+    Write-DetectionLog -Message $errorMessage -Level 'ERROR'
 }
 
 function Get-LoggedInUser {
-    Write-DetectionLog -Message "Detecting logged-in user..." -Level 'Debug'
+    Write-DetectionLog -Message "Detecting logged-in user..." -Level 'DEBUG'
     
     $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
     $isSystem = $currentUser.IsSystem
     
-    Write-DetectionLog -Message "Running as: $($currentUser.Name) (IsSystem: $isSystem)" -Level 'Debug'
+    Write-DetectionLog -Message "Running as: $($currentUser.Name) (IsSystem: $isSystem)" -Level 'DEBUG'
     
     if ($isSystem) {
         # Running as SYSTEM - find logged-in user
@@ -183,7 +183,7 @@ function Get-LoggedInUser {
             if ($explorer) {
                 $owner = $explorer.GetOwner()
                 if ($owner.ReturnValue -eq 0) {
-                    Write-DetectionLog -Message "Found user via explorer.exe: $($owner.User)" -Level 'Debug'
+                    Write-DetectionLog -Message "Found user via explorer.exe: $($owner.User)" -Level 'DEBUG'
                     return $owner.User
                 }
             }
@@ -192,7 +192,7 @@ function Get-LoggedInUser {
             $sessions = quser 2>$null | Where-Object { $_ -match '^\s*(\S+)\s+console' }
             if ($sessions) {
                 $username = ($sessions -split '\s+')[1]
-                Write-DetectionLog -Message "Found user via console: $username" -Level 'Debug'
+                Write-DetectionLog -Message "Found user via console: $username" -Level 'DEBUG'
                 return $username
             }
         }
@@ -200,7 +200,7 @@ function Get-LoggedInUser {
             Write-DetectionError -Message "Error detecting logged-in user" -ErrorRecord $_
         }
         
-        Write-DetectionLog -Message "No logged-in user found (SYSTEM context)" -Level 'Warning'
+        Write-DetectionLog -Message "No logged-in user found (SYSTEM context)" -Level 'WARNING'
         return $null
     }
     else {
@@ -228,7 +228,7 @@ function Get-UserProfilePath {
         }
     }
     catch {
-        Write-DetectionLog -Message "Failed to get profile from registry: $_" -Level 'Debug'
+        Write-DetectionLog -Message "Failed to get profile from registry: $_" -Level 'DEBUG'
     }
     
     return $null
@@ -251,7 +251,7 @@ function Get-OneDriveTenantId {
             }
         }
         catch {
-            Write-DetectionLog -Message "Could not access user registry: $_" -Level 'Debug'
+            Write-DetectionLog -Message "Could not access user registry: $_" -Level 'DEBUG'
         }
     }
     
@@ -270,8 +270,8 @@ function Get-OneDriveTenantId {
 function Write-ConnectWiseOutput {
     param([hashtable]$Data)
     
-    Write-DetectionLog -Message "Writing output" -Level 'Information'
-    Write-DetectionLog -Message "Status: $($Data.OneDrive_Status)" -Level 'Information'
+    Write-DetectionLog -Message "Writing output" -Level 'INFO'
+    Write-DetectionLog -Message "Status: $($Data.OneDrive_Status)" -Level 'INFO'
     
     # Build output as single string for RMM
     $output = @(
@@ -291,7 +291,7 @@ function Write-ConnectWiseOutput {
 #endregion
 
 # Main detection logic
-Write-DetectionLog -Message "Starting OneDrive detection" -Level 'Information'
+Write-DetectionLog -Message "Starting OneDrive detection" -Level 'INFO'
 
 try {
     # Get actual user context
@@ -299,17 +299,17 @@ try {
     $userProfile = if ($targetUser) { Get-UserProfilePath -Username $targetUser } else { $env:USERPROFILE }
     
     if (-not $userProfile -or -not (Test-Path $userProfile)) {
-        Write-DetectionLog -Message "Could not determine valid user profile path" -Level 'Error'
+        Write-DetectionLog -Message "Could not determine valid user profile path" -Level 'ERROR'
         $script:outputData.OneDrive_Status = "ERROR"
         $script:outputData.OneDrive_Reason = "No valid user profile found"
         throw "No valid user profile found"
     }
     
-    Write-DetectionLog -Message "Target user: $targetUser" -Level 'Information'
-    Write-DetectionLog -Message "User profile: $userProfile" -Level 'Information'
+    Write-DetectionLog -Message "Target user: $targetUser" -Level 'INFO'
+    Write-DetectionLog -Message "User profile: $userProfile" -Level 'INFO'
     
     # 1. Check OneDrive Installation
-    Write-DetectionLog -Message "Checking OneDrive installation..." -Level 'Information'
+    Write-DetectionLog -Message "Checking OneDrive installation..." -Level 'INFO'
     
     $oneDrivePaths = @(
         "$env:PROGRAMFILES\Microsoft OneDrive\OneDrive.exe",
@@ -324,7 +324,7 @@ try {
         if (Test-Path $path) {
             $versionInfo = (Get-Item $path).VersionInfo
             $oneDriveVersion = $versionInfo.FileVersion
-            Write-DetectionLog -Message "OneDrive found: $path (v$oneDriveVersion)" -Level 'Information'
+            Write-DetectionLog -Message "OneDrive found: $path (v$oneDriveVersion)" -Level 'INFO'
             $oneDriveFound = $true
             $script:outputData.OneDrive_Installed = "YES"
             break
@@ -332,26 +332,26 @@ try {
     }
     
     if (-not $oneDriveFound) {
-        Write-DetectionLog -Message "OneDrive is NOT installed" -Level 'Error'
+        Write-DetectionLog -Message "OneDrive is NOT installed" -Level 'ERROR'
         $script:outputData.OneDrive_Status = "NOT_CONFIGURED"
         $script:outputData.OneDrive_Reason = "OneDrive not installed"
         $script:exitCode = 1
     }
     
     # 2. Check if OneDrive is Running
-    Write-DetectionLog -Message "Checking if OneDrive is running..." -Level 'Information'
+    Write-DetectionLog -Message "Checking if OneDrive is running..." -Level 'INFO'
     
     $oneDriveProcess = Get-Process -Name "OneDrive" -ErrorAction SilentlyContinue
     if ($oneDriveProcess) {
-        Write-DetectionLog -Message "OneDrive is running (PID: $($oneDriveProcess.Id))" -Level 'Information'
+        Write-DetectionLog -Message "OneDrive is running (PID: $($oneDriveProcess.Id))" -Level 'INFO'
         $script:outputData.OneDrive_Running = "YES"
     } else {
-        Write-DetectionLog -Message "OneDrive is NOT running" -Level 'Warning'
+        Write-DetectionLog -Message "OneDrive is NOT running" -Level 'WARNING'
         $script:exitCode = 1
     }
     
     # 3. Check Tenant ID
-    Write-DetectionLog -Message "Checking tenant ID configuration..." -Level 'Information'
+    Write-DetectionLog -Message "Checking tenant ID configuration..." -Level 'INFO'
     
     # First check if tenant ID is in user's OneDrive config
     $tenantId = Get-OneDriveTenantId -Username $targetUser
@@ -363,23 +363,23 @@ try {
             $kfmValue = Get-ItemProperty -Path $policyPath -Name "KFMSilentOptIn" -ErrorAction SilentlyContinue
             if ($kfmValue -and $kfmValue.KFMSilentOptIn) {
                 $tenantId = $kfmValue.KFMSilentOptIn
-                Write-DetectionLog -Message "Tenant ID found in policy (pending application): $tenantId" -Level 'Warning'
-                Write-DetectionLog -Message "OneDrive needs to restart or user needs to log off/on to apply" -Level 'Warning'
+                Write-DetectionLog -Message "Tenant ID found in policy (pending application): $tenantId" -Level 'WARNING'
+                Write-DetectionLog -Message "OneDrive needs to restart or user needs to log off/on to apply" -Level 'WARNING'
             }
         }
     }
     
     if ($tenantId) {
-        Write-DetectionLog -Message "Tenant ID configured: $tenantId" -Level 'Information'
+        Write-DetectionLog -Message "Tenant ID configured: $tenantId" -Level 'INFO'
         $script:outputData.OneDrive_TenantConfigured = "YES"
         # Don't set exit code to 1 if found in policy - it's configured, just pending application
     } else {
-        Write-DetectionLog -Message "Tenant ID not configured" -Level 'Error'
+        Write-DetectionLog -Message "Tenant ID not configured" -Level 'ERROR'
         $script:exitCode = 1
     }
     
     # 4. Check Files On-Demand
-    Write-DetectionLog -Message "Checking Files On-Demand (OneDrive feature)..." -Level 'Information'
+    Write-DetectionLog -Message "Checking Files On-Demand (OneDrive feature)..." -Level 'INFO'
     
     $fodEnabled = $false
     $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
@@ -388,7 +388,7 @@ try {
         $fodValue = Get-ItemProperty -Path $policyPath -Name "FilesOnDemandEnabled" -ErrorAction SilentlyContinue
         if ($fodValue -and $fodValue.FilesOnDemandEnabled -eq 1) {
             $fodEnabled = $true
-            Write-DetectionLog -Message "Files On-Demand: ENABLED via policy" -Level 'Information'
+            Write-DetectionLog -Message "Files On-Demand: ENABLED via policy" -Level 'INFO'
         }
     }
     
@@ -398,29 +398,29 @@ try {
         $version = $oneDriveVersion.Split('.')
         if ([int]$version[0] -ge 23 -and [int]$version[1] -ge 66) {
             $fodEnabled = $true
-            Write-DetectionLog -Message "Files On-Demand: ENABLED by default since OneDrive March 2024 (v23.066+)" -Level 'Information'
+            Write-DetectionLog -Message "Files On-Demand: ENABLED by default since OneDrive March 2024 (v23.066+)" -Level 'INFO'
         }
         
         # Check if version supports Downloads folder KFM (23.002.0102 or higher)
         if ([int]$version[0] -gt 23 -or ([int]$version[0] -eq 23 -and [int]$version[1] -ge 2)) {
             $script:supportsDownloadsKFM = $true
-            Write-DetectionLog -Message "OneDrive version supports Downloads folder KFM" -Level 'Information'
+            Write-DetectionLog -Message "OneDrive version supports Downloads folder KFM" -Level 'INFO'
         } else {
-            Write-DetectionLog -Message "OneDrive version does NOT support Downloads folder KFM (requires 23.002+)" -Level 'Warning'
+            Write-DetectionLog -Message "OneDrive version does NOT support Downloads folder KFM (requires 23.002+)" -Level 'WARNING'
         }
     }
     
     if ($fodEnabled) {
-        Write-DetectionLog -Message "Files On-Demand allows files to show in File Explorer without using disk space" -Level 'Information'
-        Write-DetectionLog -Message "Users see cloud icons: cloud=online-only, checkmark=downloaded, pin=always keep on device" -Level 'Information'
+        Write-DetectionLog -Message "Files On-Demand allows files to show in File Explorer without using disk space" -Level 'INFO'
+        Write-DetectionLog -Message "Users see cloud icons: cloud=online-only, checkmark=downloaded, pin=always keep on device" -Level 'INFO'
         $script:outputData.OneDrive_FilesOnDemand = "YES"
     } else {
-        Write-DetectionLog -Message "Files On-Demand NOT enabled - all synced files will use local disk space" -Level 'Error'
+        Write-DetectionLog -Message "Files On-Demand NOT enabled - all synced files will use local disk space" -Level 'ERROR'
         $script:exitCode = 1
     }
     
     # 5. Check KFM (simplified check)
-    Write-DetectionLog -Message "Checking Known Folder Move..." -Level 'Information'
+    Write-DetectionLog -Message "Checking Known Folder Move..." -Level 'INFO'
     
     $kfmConfigured = $false
     if (Test-Path $policyPath) {
@@ -442,24 +442,24 @@ try {
             
             if ($coreKfmConfigured -and $downloadsKfmConfigured) {
                 $kfmConfigured = $true
-                Write-DetectionLog -Message "KFM (Known Folder Move) configured for all 4 folders:" -Level 'Information'
-                Write-DetectionLog -Message "  - Desktop: Will redirect to OneDrive" -Level 'Information'
-                Write-DetectionLog -Message "  - Documents: Will redirect to OneDrive" -Level 'Information'
-                Write-DetectionLog -Message "  - Pictures: Will redirect to OneDrive" -Level 'Information'
-                Write-DetectionLog -Message "  - Downloads: Will redirect to OneDrive" -Level 'Information'
-                Write-DetectionLog -Message "These folders will be protected and backed up by OneDrive" -Level 'Information'
+                Write-DetectionLog -Message "KFM (Known Folder Move) configured for all 4 folders:" -Level 'INFO'
+                Write-DetectionLog -Message "  - Desktop: Will redirect to OneDrive" -Level 'INFO'
+                Write-DetectionLog -Message "  - Documents: Will redirect to OneDrive" -Level 'INFO'
+                Write-DetectionLog -Message "  - Pictures: Will redirect to OneDrive" -Level 'INFO'
+                Write-DetectionLog -Message "  - Downloads: Will redirect to OneDrive" -Level 'INFO'
+                Write-DetectionLog -Message "These folders will be protected and backed up by OneDrive" -Level 'INFO'
                 $script:outputData.OneDrive_KFMConfigured = "YES"
             }
         } else {
             # Version doesn't support Downloads KFM, only check core folders
             if ($coreKfmConfigured) {
                 $kfmConfigured = $true
-                Write-DetectionLog -Message "KFM (Known Folder Move) configured for 3 core folders:" -Level 'Information'
-                Write-DetectionLog -Message "  - Desktop: Will redirect to OneDrive" -Level 'Information'
-                Write-DetectionLog -Message "  - Documents: Will redirect to OneDrive" -Level 'Information'
-                Write-DetectionLog -Message "  - Pictures: Will redirect to OneDrive" -Level 'Information'
-                Write-DetectionLog -Message "  - Downloads: NOT supported (requires OneDrive 23.002+)" -Level 'Warning'
-                Write-DetectionLog -Message "Core folders will be protected and backed up by OneDrive" -Level 'Information'
+                Write-DetectionLog -Message "KFM (Known Folder Move) configured for 3 core folders:" -Level 'INFO'
+                Write-DetectionLog -Message "  - Desktop: Will redirect to OneDrive" -Level 'INFO'
+                Write-DetectionLog -Message "  - Documents: Will redirect to OneDrive" -Level 'INFO'
+                Write-DetectionLog -Message "  - Pictures: Will redirect to OneDrive" -Level 'INFO'
+                Write-DetectionLog -Message "  - Downloads: NOT supported (requires OneDrive 23.002+)" -Level 'WARNING'
+                Write-DetectionLog -Message "Core folders will be protected and backed up by OneDrive" -Level 'INFO'
                 $script:outputData.OneDrive_KFMConfigured = "YES"
             }
         }
@@ -467,15 +467,15 @@ try {
     
     if (-not $kfmConfigured) {
         if ($script:supportsDownloadsKFM) {
-            Write-DetectionLog -Message "KFM not configured for all required folders" -Level 'Warning'
+            Write-DetectionLog -Message "KFM not configured for all required folders" -Level 'WARNING'
         } else {
-            Write-DetectionLog -Message "KFM not configured for core folders (Desktop/Documents/Pictures)" -Level 'Warning'
+            Write-DetectionLog -Message "KFM not configured for core folders (Desktop/Documents/Pictures)" -Level 'WARNING'
         }
         $script:exitCode = 1
     }
     
     # 6. Check Storage Sense
-    Write-DetectionLog -Message "Checking Storage Sense (Windows disk space management feature)..." -Level 'Information'
+    Write-DetectionLog -Message "Checking Storage Sense (Windows disk space management feature)..." -Level 'INFO'
     
     $storageSenseEnabled = $false
     $storagePolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\StorageSense"
@@ -484,24 +484,24 @@ try {
         $ssEnabled = Get-ItemProperty -Path $storagePolicyPath -Name "AllowStorageSenseGlobal" -ErrorAction SilentlyContinue
         if ($ssEnabled -and $ssEnabled.AllowStorageSenseGlobal -eq 1) {
             $storageSenseEnabled = $true
-            Write-DetectionLog -Message "Storage Sense: ENABLED (Windows feature, not OneDrive)" -Level 'Information'
-            Write-DetectionLog -Message "Storage Sense is a Windows 10/11 feature that automatically manages disk space" -Level 'Information'
+            Write-DetectionLog -Message "Storage Sense: ENABLED (Windows feature, not OneDrive)" -Level 'INFO'
+            Write-DetectionLog -Message "Storage Sense is a Windows 10/11 feature that automatically manages disk space" -Level 'INFO'
             $script:outputData.OneDrive_StorageSense = "YES"
             
             $dehydration = Get-ItemProperty -Path $storagePolicyPath -Name "ConfigStorageSenseCloudContentDehydrationThreshold" -ErrorAction SilentlyContinue
             if ($dehydration) {
                 $days = $dehydration.ConfigStorageSenseCloudContentDehydrationThreshold
-                Write-DetectionLog -Message "Storage Sense auto-conversion configured:" -Level 'Information'
-                Write-DetectionLog -Message "  - Files unused for $days days will convert to online-only" -Level 'Information'
-                Write-DetectionLog -Message "  - This means files remain in OneDrive but don't use local disk space" -Level 'Information'
-                Write-DetectionLog -Message "  - Users can still access files - they download on-demand when opened" -Level 'Information'
-                Write-DetectionLog -Message "  - This is different from Files On-Demand which just enables the feature" -Level 'Information'
+                Write-DetectionLog -Message "Storage Sense auto-conversion configured:" -Level 'INFO'
+                Write-DetectionLog -Message "  - Files unused for $days days will convert to online-only" -Level 'INFO'
+                Write-DetectionLog -Message "  - This means files remain in OneDrive but don't use local disk space" -Level 'INFO'
+                Write-DetectionLog -Message "  - Users can still access files - they download on-demand when opened" -Level 'INFO'
+                Write-DetectionLog -Message "  - This is different from Files On-Demand which just enables the feature" -Level 'INFO'
             }
         }
     }
     
     if (-not $storageSenseEnabled) {
-        Write-DetectionLog -Message "Storage Sense NOT enabled - disk space won't be automatically freed" -Level 'Warning'
+        Write-DetectionLog -Message "Storage Sense NOT enabled - disk space won't be automatically freed" -Level 'WARNING'
     }
     
     # Determine final status based on all checks
@@ -536,17 +536,17 @@ try {
         $script:exitCode = 0
         
         # Add summary explanation when everything is configured
-        Write-DetectionLog -Message "`n=== DISK SPACE OPTIMIZATION SUMMARY ===" -Level 'Information'
-        Write-DetectionLog -Message "OneDrive Features:" -Level 'Information'
-        Write-DetectionLog -Message "  * Files On-Demand: Files appear in Explorer but only download when needed" -Level 'Information'
-        Write-DetectionLog -Message "  * KFM: Desktop, Documents, Pictures, Downloads backed up to cloud" -Level 'Information'
-        Write-DetectionLog -Message "`nWindows Features:" -Level 'Information'
-        Write-DetectionLog -Message "  * Storage Sense: Automatically converts unused files to online-only after 30 days" -Level 'Information'
-        Write-DetectionLog -Message "`nHow they work together:" -Level 'Information'
-        Write-DetectionLog -Message "  1. OneDrive syncs your KFM folders to the cloud" -Level 'Information'
-        Write-DetectionLog -Message "  2. Files On-Demand shows all files but doesn't download them" -Level 'Information'
-        Write-DetectionLog -Message "  3. Storage Sense frees disk space by making old files online-only" -Level 'Information'
-        Write-DetectionLog -Message "  4. Result: Full file access with minimal disk usage" -Level 'Information'
+        Write-DetectionLog -Message "`n=== DISK SPACE OPTIMIZATION SUMMARY ===" -Level 'INFO'
+        Write-DetectionLog -Message "OneDrive Features:" -Level 'INFO'
+        Write-DetectionLog -Message "  * Files On-Demand: Files appear in Explorer but only download when needed" -Level 'INFO'
+        Write-DetectionLog -Message "  * KFM: Desktop, Documents, Pictures, Downloads backed up to cloud" -Level 'INFO'
+        Write-DetectionLog -Message "`nWindows Features:" -Level 'INFO'
+        Write-DetectionLog -Message "  * Storage Sense: Automatically converts unused files to online-only after 30 days" -Level 'INFO'
+        Write-DetectionLog -Message "`nHow they work together:" -Level 'INFO'
+        Write-DetectionLog -Message "  1. OneDrive syncs your KFM folders to the cloud" -Level 'INFO'
+        Write-DetectionLog -Message "  2. Files On-Demand shows all files but doesn't download them" -Level 'INFO'
+        Write-DetectionLog -Message "  3. Storage Sense frees disk space by making old files online-only" -Level 'INFO'
+        Write-DetectionLog -Message "  4. Result: Full file access with minimal disk usage" -Level 'INFO'
     } else {
         $script:outputData.OneDrive_Status = "NOT_CONFIGURED"
         $script:outputData.OneDrive_Reason = $failureReasons -join "; "
@@ -564,7 +564,7 @@ catch {
 Write-ConnectWiseOutput -Data $script:outputData
 
 # Log completion
-Write-DetectionLog -Message "Detection completed with exit code: $script:exitCode" -Level 'Information'
+Write-DetectionLog -Message "Detection completed with exit code: $script:exitCode" -Level 'INFO'
 
 # Cleanup logging
 if ($script:LoggingEnabled) {

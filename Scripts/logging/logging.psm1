@@ -16,7 +16,7 @@
     - Configurable - All paths and names are customizable
     
 .NOTES
-    Version:        2.1.0
+    Version:        2.2.0
     Author:         System Administrator
     Creation Date:  2024-01-01
     Last Modified:  2025-08-02
@@ -206,8 +206,8 @@ function Write-AppDeploymentLog {
         [Parameter(Mandatory = $true)]
         [string]$Message,
         [Parameter()]
-        [ValidateSet('Information', 'Warning', 'Error', 'Debug', 'Success')]
-        [string]$Level = 'Information',
+        [ValidateSet('INFO', 'WARNING', 'ERROR', 'DEBUG', 'SUCCESS')]
+        [string]$Level = 'INFO',
         [Parameter()]
         [ValidateSet('EnableDebug', 'SilentMode', 'Off')]
         [string]$Mode = 'Off'
@@ -576,7 +576,7 @@ function Write-AppDeploymentLog {
         switch ($Level.ToUpper()) {
             'ERROR' { Write-Host $consoleLogMessage -ForegroundColor Red }
             'WARNING' { Write-Host $consoleLogMessage -ForegroundColor Yellow }
-            'INFORMATION' { Write-Host $consoleLogMessage -ForegroundColor White }
+            'INFO' { Write-Host $consoleLogMessage -ForegroundColor White }
             'DEBUG' { Write-Host $consoleLogMessage -ForegroundColor Gray }
             'SUCCESS' { Write-Host $consoleLogMessage -ForegroundColor Green }
         }
@@ -601,22 +601,23 @@ function Write-EnhancedLog {
 
     # Map enhanced log levels to standard log levels
     $mappedLevel = switch ($Level.ToUpper()) {
-        'CRITICAL' { 'Error' }
-        'ERROR'    { 'Error' }
-        'WARNING'  { 'Warning' }
-        'INFO'     { 'Information' }
-        'DEBUG'    { 'Debug' }
-        'NOTICE'   { 'Information' }
-        'IMPORTANT' { 'Information' }
-        'OUTPUT'   { 'Information' }
-        'SIGNIFICANT' { 'Information' }
-        'VERBOSE'  { 'Debug' }
-        'SUCCESS'  { 'Success' }
-        'VERYVERBOSE' { 'Debug' }
-        'SOMEWHATVERBOSE' { 'Debug' }
-        'SYSTEM'   { 'Information' }
-        'INTERNALCOMMENT' { 'Debug' }
-        default    { 'Information' }
+        'CRITICAL' { 'ERROR' }
+        'ERROR'    { 'ERROR' }
+        'WARNING'  { 'WARNING' }
+        'INFO'     { 'INFO' }
+        'INFORMATION' { 'INFO' }  # Support old verbose name
+        'DEBUG'    { 'DEBUG' }
+        'NOTICE'   { 'INFO' }
+        'IMPORTANT' { 'INFO' }
+        'OUTPUT'   { 'INFO' }
+        'SIGNIFICANT' { 'INFO' }
+        'VERBOSE'  { 'DEBUG' }
+        'SUCCESS'  { 'SUCCESS' }
+        'VERYVERBOSE' { 'DEBUG' }
+        'SOMEWHATVERBOSE' { 'DEBUG' }
+        'SYSTEM'   { 'INFO' }
+        'INTERNALCOMMENT' { 'DEBUG' }
+        default    { 'INFO' }
     }
 
     # Format message with caller information
