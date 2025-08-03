@@ -336,9 +336,9 @@ try {
     # Set maximum file size (15GB)
     Set-ItemProperty -Path $policyPath -Name "ForcedLocalMassDeleteDetection" -Value 1 -Type DWord
     
-    # Enable automatic sign-in
+    # Enable automatic sign-in with Windows credentials
     Set-ItemProperty -Path $policyPath -Name "SilentAccountConfig" -Value 1 -Type DWord
-    Write-RemediationLog "Enabled silent account configuration"
+    Write-RemediationLog "Enabled silent account configuration - users will auto-login with Windows credentials"
     
     # 4. Configure Storage Sense for automatic disk space management
     $storageSenseSuccess = Configure-StorageSense -DaysUntilOnlineOnly $StorageSenseDays

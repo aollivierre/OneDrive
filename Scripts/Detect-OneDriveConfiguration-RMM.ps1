@@ -52,6 +52,7 @@ $script:outputData = @{
     OneDrive_FilesOnDemand = "NO"
     OneDrive_KFMConfigured = "NO"
     OneDrive_StorageSense = "NO"
+    OneDrive_AutoLogin = "NO"
 }
 
 #region Logging Module Configuration
@@ -285,6 +286,7 @@ function Write-ConnectWiseOutput {
         "OneDrive_FilesOnDemand: $($Data.OneDrive_FilesOnDemand)",
         "OneDrive_KFMConfigured: $($Data.OneDrive_KFMConfigured)",
         "OneDrive_StorageSense: $($Data.OneDrive_StorageSense)",
+        "OneDrive_AutoLogin: $($Data.OneDrive_AutoLogin)",
         "OneDrive_CheckDate: $($Data.OneDrive_CheckDate)"
     ) -join "`n"
     
@@ -530,6 +532,24 @@ try {
         Write-DetectionLog -Message "Storage Sense NOT enabled - disk space won't be automatically freed" -Level 'WARNING'
     }
     
+    # 7. Check Silent Account Configuration (Auto-login)
+    Write-DetectionLog -Message "Checking OneDrive auto-login configuration..." -Level 'INFO'
+    
+    $autoLoginEnabled = $false
+    if (Test-Path $policyPath) {
+        $silentConfig = Get-ItemProperty -Path $policyPath -Name "SilentAccountConfig" -ErrorAction SilentlyContinue
+        if ($silentConfig -and $silentConfig.SilentAccountConfig -eq 1) {
+            $autoLoginEnabled = $true
+            Write-DetectionLog -Message "Silent Account Config: ENABLED - users will auto-login with Windows credentials" -Level 'INFO'
+            $script:outputData.OneDrive_AutoLogin = "YES"
+        }
+    }
+    
+    if (-not $autoLoginEnabled) {
+        Write-DetectionLog -Message "Silent Account Config NOT enabled - users must manually sign in to OneDrive" -Level 'WARNING'
+        $script:exitCode = 1
+    }
+    
     # Determine final status based on all checks
     $allChecksPass = $true
     $failureReasons = @()
@@ -554,6 +574,10 @@ try {
         $allChecksPass = $false
         $failureReasons += "KFM not configured"
     }
+    if ($script:outputData.OneDrive_AutoLogin -ne "YES") {
+        $allChecksPass = $false
+        $failureReasons += "Auto-login not configured"
+    }
     # Storage Sense is optional but recommended
     
     if ($allChecksPass) {
@@ -566,6 +590,7 @@ try {
         Write-DetectionLog -Message "OneDrive Features:" -Level 'INFO'
         Write-DetectionLog -Message "  * Files On-Demand: Files appear in Explorer but only download when needed" -Level 'INFO'
         Write-DetectionLog -Message "  * KFM: Desktop, Documents, Pictures, Downloads backed up to cloud" -Level 'INFO'
+        Write-DetectionLog -Message "  * Auto-Login: Users automatically signed in with Windows credentials" -Level 'INFO'
         Write-DetectionLog -Message "`nWindows Features:" -Level 'INFO'
         Write-DetectionLog -Message "  * Storage Sense: Automatically converts unused files to online-only after 30 days" -Level 'INFO'
         Write-DetectionLog -Message "`nHow they work together:" -Level 'INFO'
