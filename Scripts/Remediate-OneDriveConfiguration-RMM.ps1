@@ -93,20 +93,11 @@ function Write-RemediationLog {
         [string]$Level = "Information"
     )
     
-    # Map remediation script's traditional levels to module levels
-    $standardLevel = switch ($Level) {
-        "SUCCESS" { "Success" }
-        "INFO" { "Information" }
-        "WARNING" { "Warning" }
-        "ERROR" { "Error" }
-        default { $Level }  # Pass through if already standard
-    }
-    
     if ($script:LoggingEnabled) {
         try {
             # Force EnableDebug mode if global debug is set
             $actualMode = if ($global:EnableDebug) { 'EnableDebug' } else { $script:LoggingMode }
-            Write-AppDeploymentLog -Message $Message -Level $standardLevel -Mode $actualMode
+            Write-AppDeploymentLog -Message $Message -Level $Level -Mode $actualMode
         }
         catch {
             # Logging failed, fall back to simple logging
@@ -119,11 +110,13 @@ function Write-RemediationLog {
         Add-Content -Path $LogPath -Value $logMessage -Force -ErrorAction SilentlyContinue
         
         # Only write to console if debug is enabled or it's an error
-        if ($EnableDebug -or $Level -eq "ERROR") {
+        if ($EnableDebug -or $Level -eq "Error") {
             $color = switch ($Level) {
-                "ERROR" { "Red" }
-                "WARNING" { "Yellow" }
-                "SUCCESS" { "Green" }
+                "Error" { "Red" }
+                "Warning" { "Yellow" }
+                "Success" { "Green" }
+                "Information" { "White" }
+                "Debug" { "Gray" }
                 default { "White" }
             }
             Write-Host $Message -ForegroundColor $color
@@ -181,11 +174,11 @@ function Configure-StorageSense {
             Write-RemediationLog "Configured user-level Storage Sense settings"
         }
         
-        Write-RemediationLog "Storage Sense configuration completed" "SUCCESS"
+        Write-RemediationLog "Storage Sense configuration completed" "Success"
         return $true
     }
     catch {
-        Write-RemediationLog "Failed to configure Storage Sense: $_" "ERROR"
+        Write-RemediationLog "Failed to configure Storage Sense: $_" "Error"
         return $false
     }
 }
@@ -205,7 +198,7 @@ try {
         Write-RemediationLog "Loading detection results from: $DetectionResultsPath"
         $detectionResults = Get-Content -Path $DetectionResultsPath -Raw | ConvertFrom-Json
     } else {
-        Write-RemediationLog "No detection results found, will perform full remediation" "WARNING"
+        Write-RemediationLog "No detection results found, will perform full remediation" "Warning"
     }
     
     # 1. Install OneDrive if needed
@@ -223,13 +216,13 @@ try {
             Write-RemediationLog "Installing OneDrive..."
             Start-Process -FilePath $installerPath -ArgumentList "/allusers" -Wait -NoNewWindow
             
-            Write-RemediationLog "OneDrive installation completed" "SUCCESS"
+            Write-RemediationLog "OneDrive installation completed" "Success"
             
             # Clean up installer
             Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
         }
         catch {
-            Write-RemediationLog "Failed to install OneDrive: $_" "ERROR"
+            Write-RemediationLog "Failed to install OneDrive: $_" "Error"
             $script:remediationSuccess = $false
         }
     }
@@ -247,11 +240,11 @@ try {
     
     # Configure tenant ID for KFM
     Set-ItemProperty -Path $policyPath -Name "KFMSilentOptIn" -Value $TenantId -Type String
-    Write-RemediationLog "Configured tenant ID for KFM: $TenantId" "SUCCESS"
+    Write-RemediationLog "Configured tenant ID for KFM: $TenantId" "Success"
     
     # Enable Files On-Demand (Note: Already on by default since March 2024)
     Set-ItemProperty -Path $policyPath -Name "FilesOnDemandEnabled" -Value 1 -Type DWord
-    Write-RemediationLog "Ensured Files On-Demand is enabled" "SUCCESS"
+    Write-RemediationLog "Ensured Files On-Demand is enabled" "Success"
     
     # Check OneDrive version to determine Downloads folder support
     $oneDrivePaths = @(
@@ -272,7 +265,7 @@ try {
                 $script:supportsDownloadsKFM = $true
                 Write-RemediationLog "OneDrive version supports Downloads folder KFM"
             } else {
-                Write-RemediationLog "OneDrive version does NOT support Downloads folder KFM (requires 23.002+)" "WARNING"
+                Write-RemediationLog "OneDrive version does NOT support Downloads folder KFM (requires 23.002+)" "Warning"
             }
             break
         }
@@ -301,10 +294,10 @@ try {
     }
     
     if ($script:supportsDownloadsKFM) {
-        Write-RemediationLog "KFM configured for all 4 folders" "SUCCESS"
+        Write-RemediationLog "KFM configured for all 4 folders" "Success"
     } else {
-        Write-RemediationLog "KFM configured for 3 core folders (Desktop/Documents/Pictures)" "SUCCESS"
-        Write-RemediationLog "Downloads folder will be added when OneDrive is updated to 23.002+" "INFO"
+        Write-RemediationLog "KFM configured for 3 core folders (Desktop/Documents/Pictures)" "Success"
+        Write-RemediationLog "Downloads folder will be added when OneDrive is updated to 23.002+" "Information"
     }
     
     # 3. Additional optimization settings
@@ -325,7 +318,7 @@ try {
     # 4. Configure Storage Sense for automatic disk space management
     $storageSenseSuccess = Configure-StorageSense -DaysUntilOnlineOnly $StorageSenseDays
     if (-not $storageSenseSuccess) {
-        Write-RemediationLog "Storage Sense configuration failed - files will need manual conversion to online-only" "WARNING"
+        Write-RemediationLog "Storage Sense configuration failed - files will need manual conversion to online-only" "Warning"
     }
     
     # 5. Start OneDrive if not running
@@ -365,18 +358,18 @@ try {
                 Start-Sleep -Seconds 5
                 Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
                 
-                Write-RemediationLog "OneDrive start initiated" "SUCCESS"
+                Write-RemediationLog "OneDrive start initiated" "Success"
             } else {
-                Write-RemediationLog "No interactive user found - OneDrive will start at next login" "WARNING"
+                Write-RemediationLog "No interactive user found - OneDrive will start at next login" "Warning"
             }
         } else {
-            Write-RemediationLog "OneDrive.exe not found after installation" "ERROR"
+            Write-RemediationLog "OneDrive.exe not found after installation" "Error"
             $script:remediationSuccess = $false
         }
     }
     
     # 6. Verify remediation
-    Write-RemediationLog "`n=== REMEDIATION SUMMARY ===" "INFO"
+    Write-RemediationLog "`n=== REMEDIATION SUMMARY ===" "Information"
     
     # Check if all critical settings are in place
     $verifySettings = @{
@@ -396,9 +389,9 @@ try {
     foreach ($setting in $verifySettings.GetEnumerator()) {
         $value = Get-ItemProperty -Path $policyPath -Name $setting.Key -ErrorAction SilentlyContinue
         if ($value.$($setting.Key) -eq $setting.Value) {
-            Write-RemediationLog "$($setting.Key): Configured correctly" "SUCCESS"
+            Write-RemediationLog "$($setting.Key): Configured correctly" "Success"
         } else {
-            Write-RemediationLog "$($setting.Key): NOT configured correctly" "ERROR"
+            Write-RemediationLog "$($setting.Key): NOT configured correctly" "Error"
             $allConfigured = $false
         }
     }
@@ -406,20 +399,20 @@ try {
     # Check Storage Sense
     $storageSenseEnabled = Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\StorageSense" -Name "AllowStorageSenseGlobal" -ErrorAction SilentlyContinue
     if ($storageSenseEnabled.AllowStorageSenseGlobal -eq 1) {
-        Write-RemediationLog "Storage Sense: Enabled" "SUCCESS"
+        Write-RemediationLog "Storage Sense: Enabled" "Success"
         Write-RemediationLog "Files will automatically convert to online-only after $StorageSenseDays days of non-use"
     } else {
-        Write-RemediationLog "Storage Sense: Not enabled" "WARNING"
+        Write-RemediationLog "Storage Sense: Not enabled" "Warning"
     }
     
     if ($allConfigured -and $script:remediationSuccess) {
-        Write-RemediationLog "`nREMEDIATION SUCCESSFUL" "SUCCESS"
+        Write-RemediationLog "`nREMEDIATION SUCCESSFUL" "Success"
         Write-RemediationLog "OneDrive is configured for disk space optimization"
         Write-RemediationLog "Storage Sense will automatically free space by converting unused files to online-only"
         Write-RemediationLog "Settings will take effect at next user login or policy refresh"
         $script:exitCode = 0
     } else {
-        Write-RemediationLog "`nREMEDIATION PARTIALLY SUCCESSFUL" "WARNING"
+        Write-RemediationLog "`nREMEDIATION PARTIALLY SUCCESSFUL" "Warning"
         Write-RemediationLog "Some settings may require manual intervention"
         $script:exitCode = 1
     }
@@ -430,7 +423,7 @@ try {
     Write-RemediationLog "Group policy update initiated"
     
     # Additional info about disk space savings
-    Write-RemediationLog "`n=== DISK SPACE OPTIMIZATION INFO ===" "INFO"
+    Write-RemediationLog "`n=== DISK SPACE OPTIMIZATION INFO ===" "Information"
     Write-RemediationLog "Files On-Demand: Enabled by default since OneDrive March 2024"
     Write-RemediationLog "Storage Sense: Configured to run weekly"
     Write-RemediationLog "Automatic conversion: Files unused for $StorageSenseDays days become online-only"
@@ -438,7 +431,7 @@ try {
     Write-RemediationLog "Protected files: Files marked 'Always keep on this device' won't be converted"
 }
 catch {
-    Write-RemediationLog "CRITICAL ERROR during remediation: $_" "ERROR"
+    Write-RemediationLog "CRITICAL ERROR during remediation: $_" "Error"
     $script:exitCode = 1
 }
 
