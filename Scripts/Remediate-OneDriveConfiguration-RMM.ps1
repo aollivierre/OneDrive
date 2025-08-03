@@ -90,16 +90,16 @@ else {
 function Write-RemediationLog {
     param(
         [string]$Message, 
-        [string]$Level = "INFO"
+        [string]$Level = "Information"
     )
     
-    # Map legacy levels to standard levels
+    # Map remediation script's traditional levels to module levels
     $standardLevel = switch ($Level) {
-        "SUCCESS" { "Information" }
+        "SUCCESS" { "Success" }
         "INFO" { "Information" }
         "WARNING" { "Warning" }
         "ERROR" { "Error" }
-        default { "Information" }
+        default { $Level }  # Pass through if already standard
     }
     
     if ($script:LoggingEnabled) {
@@ -120,15 +120,13 @@ function Write-RemediationLog {
         
         # Only write to console if debug is enabled or it's an error
         if ($EnableDebug -or $Level -eq "ERROR") {
-            if ($Level -eq "ERROR") {
-                Write-Host $Message -ForegroundColor Red
-            } elseif ($Level -eq "WARNING") {
-                Write-Host $Message -ForegroundColor Yellow
-            } elseif ($Level -eq "SUCCESS") {
-                Write-Host $Message -ForegroundColor Green
-            } else {
-                Write-Host $Message
+            $color = switch ($Level) {
+                "ERROR" { "Red" }
+                "WARNING" { "Yellow" }
+                "SUCCESS" { "Green" }
+                default { "White" }
             }
+            Write-Host $Message -ForegroundColor $color
         }
     }
 }

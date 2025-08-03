@@ -12,7 +12,7 @@
 RootModule = 'logging.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.0'
+ModuleVersion = '2.1.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -130,6 +130,16 @@ PrivateData = @{
 
         # ReleaseNotes of this module
         ReleaseNotes = @'
+## Version 2.1.0 - 2025-08-03
+### Added
+- Support for 'Success' logging level
+- Green color output for success messages in console
+- Proper semantic differentiation between Information and Success
+
+### Changed
+- Extended ValidateSet to include Success level
+- Updated console output switch to handle Success level
+
 ## Version 2.0.0 - 2025-08-02
 ### Fixed
 - Line number detection now works correctly with wrapper functions

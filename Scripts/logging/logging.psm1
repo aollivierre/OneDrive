@@ -16,7 +16,7 @@
     - Configurable - All paths and names are customizable
     
 .NOTES
-    Version:        2.0.0
+    Version:        2.1.0
     Author:         System Administrator
     Creation Date:  2024-01-01
     Last Modified:  2025-08-02
@@ -206,7 +206,7 @@ function Write-AppDeploymentLog {
         [Parameter(Mandatory = $true)]
         [string]$Message,
         [Parameter()]
-        [ValidateSet('Information', 'Warning', 'Error', 'Debug')]
+        [ValidateSet('Information', 'Warning', 'Error', 'Debug', 'Success')]
         [string]$Level = 'Information',
         [Parameter()]
         [ValidateSet('EnableDebug', 'SilentMode', 'Off')]
@@ -578,6 +578,7 @@ function Write-AppDeploymentLog {
             'WARNING' { Write-Host $consoleLogMessage -ForegroundColor Yellow }
             'INFORMATION' { Write-Host $consoleLogMessage -ForegroundColor White }
             'DEBUG' { Write-Host $consoleLogMessage -ForegroundColor Gray }
+            'SUCCESS' { Write-Host $consoleLogMessage -ForegroundColor Green }
         }
     }
     #endregion Console Output
@@ -610,6 +611,7 @@ function Write-EnhancedLog {
         'OUTPUT'   { 'Information' }
         'SIGNIFICANT' { 'Information' }
         'VERBOSE'  { 'Debug' }
+        'SUCCESS'  { 'Success' }
         'VERYVERBOSE' { 'Debug' }
         'SOMEWHATVERBOSE' { 'Debug' }
         'SYSTEM'   { 'Information' }
