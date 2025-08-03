@@ -8,9 +8,15 @@
     - Configures OneDrive (Files On-Demand, KFM, etc.)
     - Enables and configures Windows Storage Sense for automatic space management
     - Sets up automatic conversion of unused files to online-only
+    - Optionally installs OneDrive if missing (default behavior)
+    - Can run in ConfigurationOnly mode to skip installation
+.PARAMETER ConfigurationOnly
+    When specified, skips OneDrive installation and only configures existing OneDrive.
+    Use this when OneDrive deployment is handled separately.
 .NOTES
     Designed to run from SYSTEM context via RMM
     Storage Sense automates Files On-Demand to free disk space
+    For production RMM deployment, consider using -ConfigurationOnly
 #>
 
 param(
@@ -18,7 +24,8 @@ param(
     [string]$DetectionResultsPath = "$env:TEMP\OneDrive-Detection-Results.json",
     [string]$TenantId = "336dbee2-bd39-4116-b305-3105539e416f",
     [int]$StorageSenseDays = 30,  # Days before converting files to online-only
-    [switch]$EnableDebug = $false  # Enable console output for testing
+    [switch]$EnableDebug = $false,  # Enable console output for testing
+    [switch]$ConfigurationOnly = $false  # Skip OneDrive installation, only configure existing
 )
 
 # Initialize
@@ -195,29 +202,53 @@ try {
         Write-RemediationLog "No detection results found, will perform full remediation" "WARNING"
     }
     
-    # 1. Install OneDrive if needed
+    # 1. Install OneDrive if needed (skip if ConfigurationOnly)
     if ($detectionResults.OneDriveInstalled -eq $false) {
-        Write-RemediationLog "OneDrive not installed - attempting installation..."
-        
-        # Download OneDrive installer
-        $installerUrl = "https://go.microsoft.com/fwlink/?linkid=844652"
-        $installerPath = "$env:TEMP\OneDriveSetup.exe"
-        
-        try {
-            Write-RemediationLog "Downloading OneDrive installer..."
-            Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
+        if ($ConfigurationOnly) {
+            Write-RemediationLog "OneDrive not installed, but ConfigurationOnly mode is set - skipping installation" "WARNING"
+            Write-RemediationLog "OneDrive deployment should be handled separately" "INFO"
             
-            Write-RemediationLog "Installing OneDrive..."
-            Start-Process -FilePath $installerPath -ArgumentList "/allusers" -Wait -NoNewWindow
+            # Exit early if OneDrive not installed and we're in ConfigurationOnly mode
+            Write-RemediationLog "Cannot configure OneDrive when it's not installed" "ERROR"
+            $script:exitCode = 1
             
-            Write-RemediationLog "OneDrive installation completed" "SUCCESS"
+            Write-RemediationLog "`nRemediation completed. Exit code: $script:exitCode"
             
-            # Clean up installer
-            Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
+            # Cleanup logging
+            if ($script:LoggingEnabled) {
+                try {
+                    Stop-UniversalTranscript -ErrorAction SilentlyContinue
+                }
+                catch {
+                    # Ignore transcript errors
+                }
+            }
+            
+            exit $script:exitCode
         }
-        catch {
-            Write-RemediationLog "Failed to install OneDrive: $_" "ERROR"
-            $script:remediationSuccess = $false
+        else {
+            Write-RemediationLog "OneDrive not installed - attempting installation..."
+            
+            # Download OneDrive installer
+            $installerUrl = "https://go.microsoft.com/fwlink/?linkid=844652"
+            $installerPath = "$env:TEMP\OneDriveSetup.exe"
+            
+            try {
+                Write-RemediationLog "Downloading OneDrive installer..."
+                Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
+                
+                Write-RemediationLog "Installing OneDrive..."
+                Start-Process -FilePath $installerPath -ArgumentList "/allusers" -Wait -NoNewWindow
+                
+                Write-RemediationLog "OneDrive installation completed" "SUCCESS"
+                
+                # Clean up installer
+                Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
+            }
+            catch {
+                Write-RemediationLog "Failed to install OneDrive: $_" "ERROR"
+                $script:remediationSuccess = $false
+            }
         }
     }
     

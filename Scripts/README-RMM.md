@@ -19,8 +19,11 @@ These scripts configure OneDrive for optimal disk space usage in preparation for
 
 ### 2. Remediate-OneDriveConfiguration-RMM.ps1
 - **Purpose**: Applies OneDrive configuration for disk space optimization
+- **Parameters**:
+  - `-ConfigurationOnly`: Skip OneDrive installation, only configure existing
+  - `-EnableDebug`: Enable verbose logging for troubleshooting
 - **Actions**:
-  - Installs OneDrive if missing
+  - Installs OneDrive if missing (unless -ConfigurationOnly)
   - Configures tenant ID: 336dbee2-bd39-4116-b305-3105539e416f
   - Enables Files On-Demand
   - Configures KFM for Desktop, Documents, Pictures, Downloads
@@ -28,6 +31,18 @@ These scripts configure OneDrive for optimal disk space usage in preparation for
   - Starts OneDrive if not running
 
 ## RMM Deployment
+
+### Production Deployment (Configuration-Only)
+
+For production environments where OneDrive is pre-installed with Windows:
+
+```powershell
+# Detection - no parameters needed
+powershell.exe -ExecutionPolicy Bypass -File Detect-OneDriveConfiguration-RMM.ps1
+
+# Remediation - configuration only, no download/install
+powershell.exe -ExecutionPolicy Bypass -File Remediate-OneDriveConfiguration-RMM.ps1 -ConfigurationOnly
+```
 
 ### ConnectWise Automate
 1. Create Detection script:
@@ -38,6 +53,7 @@ These scripts configure OneDrive for optimal disk space usage in preparation for
 2. Create Remediation script:
    - Script Type: PowerShell
    - Exit Code Success: 0
+   - **Parameters**: Add `-ConfigurationOnly` for production
 
 3. Create monitor/policy:
    - Run detection daily/weekly
