@@ -11,7 +11,7 @@
 [CmdletBinding()]
 param(
     [Parameter()]
-    [ValidateSet('Detection', 'Remediation', 'V2Detection', 'Validation')]
+    [ValidateSet('Detection', 'Remediation', 'V2Detection', 'Validation', 'DMU')]
     [string]$TestScript = 'Validation',
     
     [Parameter()]
@@ -41,6 +41,12 @@ if (-not $psExecPath) {
     Invoke-WebRequest 'https://live.sysinternals.com/PsExec.exe' -OutFile $psExecPath
 }
 
+# Ensure C:\Temp exists
+if (-not (Test-Path "C:\Temp")) {
+    New-Item -Path "C:\Temp" -ItemType Directory -Force | Out-Null
+    Write-Host "Created C:\Temp directory" -ForegroundColor Green
+}
+
 Write-Host "`n=== Testing OneDrive Scripts as SYSTEM (Interactive Window) ===" -ForegroundColor Cyan
 Write-Host "This will open a new PowerShell window running as SYSTEM`n" -ForegroundColor Gray
 
@@ -50,6 +56,7 @@ $scriptPath = switch ($TestScript) {
     'Remediation' { "C:\code\OneDrive\Scripts\Remediate-OneDriveConfiguration.ps1" }
     'V2Detection' { "C:\code\OneDrive\Scripts\Invoke-OneDriveDetectionRemediationV2.ps1" }
     'Validation' { "C:\code\OneDrive\Scripts\Test-OneDriveValidation-Interactive.ps1" }
+    'DMU' { "C:\code\OneDrive\Scripts\Test-OneDriveValidation-DMU-Style.ps1" }
 }
 
 Write-Host "Testing: $TestScript" -ForegroundColor Yellow
@@ -138,7 +145,7 @@ $psexecArgs = @(
     "-accepteula",      # Accept EULA silently
     "-s",               # Run as SYSTEM
     "-i",               # Interactive in current session (shows window)
-    "-d",               # Don't wait for process to terminate
+    # Removed -d flag so window stays open
     "powershell.exe",   # Run PowerShell
     "-ExecutionPolicy", "Bypass",
     "-NoProfile",
@@ -158,3 +165,4 @@ Write-Host "  - Confirmation that it's running as NT AUTHORITY\SYSTEM" -Foregrou
 Write-Host "  - Detection of logged-in users via explorer.exe" -ForegroundColor Cyan
 Write-Host "  - OneDrive script output and any errors" -ForegroundColor Cyan
 Write-Host "`nThe window will stay open until you press a key." -ForegroundColor Gray
+Write-Host "(Without -d flag, this command will wait for the SYSTEM window to close)" -ForegroundColor Yellow

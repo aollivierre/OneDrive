@@ -2,7 +2,7 @@
   "$schema": "https://schemas.placeholders.dev/claude-local-settings.json",
   "permissions": {
     "allow": [
-      "Bash(git checkout:*)"
+      "Bash(Move-Item \"C:\\code\\OneDrive\\Scripts\\Test-OneDriveRMM-AsSystem-Production.ps1\" \"C:\\code\\OneDrive\\Scripts\\Archive\\Test-OneDriveRMM-AsSystem-Production.ps1.bak\" -Force)"
     ],
     "deny": []
   }

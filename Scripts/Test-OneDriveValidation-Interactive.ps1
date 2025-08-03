@@ -13,7 +13,10 @@
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string]$TenantID = "GetFromRegistry"  # Will try to detect from existing config
+    [string]$TenantID = "GetFromRegistry",  # Will try to detect from existing config
+    
+    [Parameter()]
+    [string]$LogFile = "$env:TEMP\OneDrive-Validation-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
 )
 
 #region Helper Functions
@@ -23,6 +26,12 @@ function Write-ValidationLog {
         [ValidateSet('Info', 'Success', 'Warning', 'Error', 'Debug')]
         [string]$Level = 'Info'
     )
+    
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $logMessage = "$timestamp [$Level] $Message"
+    
+    # Write to log file
+    Add-Content -Path $LogFile -Value $logMessage -Force -ErrorAction SilentlyContinue
     
     $colors = @{
         'Info' = 'Cyan'
@@ -43,6 +52,50 @@ function Write-ValidationLog {
     Write-Host "$($prefix[$Level]) $Message" -ForegroundColor $colors[$Level]
 }
 
+function Get-LoggedInUserSID {
+    # Get the SID of the currently logged-in user (even from SYSTEM context)
+    try {
+        $explorerProcesses = Get-Process -Name "explorer" -ErrorAction SilentlyContinue
+        if ($explorerProcesses) {
+            $userProcess = $explorerProcesses[0]
+            $owner = (Get-WmiObject Win32_Process -Filter "ProcessId = $($userProcess.Id)").GetOwner()
+            if ($owner.User) {
+                $username = "$($owner.Domain)\$($owner.User)"
+                $userSID = (New-Object System.Security.Principal.NTAccount($username)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+                Write-ValidationLog "Found logged-in user SID: $userSID for $username" -Level Info
+                return $userSID
+            }
+        }
+    }
+    catch {
+        Write-ValidationLog "Could not determine logged-in user SID: $_" -Level Warning
+    }
+    return $null
+}
+
+function Get-UserRegistryPath {
+    param([string]$RegistryPath)
+    
+    $isSystem = [Security.Principal.WindowsIdentity]::GetCurrent().IsSystem
+    
+    if ($isSystem) {
+        # Running as SYSTEM - need to access the logged-in user's registry
+        $userSID = Get-LoggedInUserSID
+        if ($userSID) {
+            # Convert HKCU: to HKU:\<SID>
+            $userPath = $RegistryPath -replace "^HKCU:", "Registry::HKEY_USERS\$userSID"
+            Write-ValidationLog "Converting registry path for SYSTEM context: $RegistryPath -> $userPath" -Level Debug
+            return $userPath
+        } else {
+            Write-ValidationLog "Cannot access user registry from SYSTEM - no logged-in user found" -Level Error
+            return $null
+        }
+    } else {
+        # Running as user - use HKCU: directly
+        return $RegistryPath
+    }
+}
+
 function Get-ActualOneDrivePath {
     # Get the ACTUAL OneDrive path from environment or registry
     $oneDrivePath = $env:OneDrive
@@ -54,12 +107,26 @@ function Get-ActualOneDrivePath {
             "HKCU:\Software\Microsoft\OneDrive\Accounts\Personal"
         )
         
-        foreach ($regPath in $regPaths) {
-            if (Test-Path $regPath) {
-                $userFolder = Get-ItemProperty -Path $regPath -Name "UserFolder" -ErrorAction SilentlyContinue
-                if ($userFolder -and $userFolder.UserFolder) {
-                    $oneDrivePath = $userFolder.UserFolder
-                    break
+        # Convert paths for SYSTEM context if needed
+        $actualRegPaths = @()
+        foreach ($path in $regPaths) {
+            $userPath = Get-UserRegistryPath -RegistryPath $path
+            if ($userPath) {
+                $actualRegPaths += $userPath
+            }
+        }
+        
+        foreach ($regPath in $actualRegPaths) {
+            if ($regPath -and (Test-Path $regPath)) {
+                try {
+                    $userFolder = Get-ItemProperty -Path $regPath -Name "UserFolder" -ErrorAction SilentlyContinue
+                    if ($userFolder -and $userFolder.UserFolder) {
+                        $oneDrivePath = $userFolder.UserFolder
+                        break
+                    }
+                }
+                catch {
+                    Write-ValidationLog "Could not access registry path $regPath`: $($_)" -Level Warning
                 }
             }
         }
@@ -76,14 +143,20 @@ function Test-FolderRedirection {
     
     Write-ValidationLog "Checking $FolderName folder redirection..." -Level Info
     
-    # Get actual folder path
+    # Get actual folder path from user registry (works in SYSTEM context)
     $shellFoldersPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+    $userShellFoldersPath = Get-UserRegistryPath -RegistryPath $shellFoldersPath
     $actualPath = $null
     
-    if ($RegistryGuid) {
-        $regValue = Get-ItemProperty -Path $shellFoldersPath -Name $RegistryGuid -ErrorAction SilentlyContinue
-        if ($regValue) {
-            $actualPath = $regValue.$RegistryGuid
+    if ($userShellFoldersPath -and $RegistryGuid) {
+        try {
+            $regValue = Get-ItemProperty -Path $userShellFoldersPath -Name $RegistryGuid -ErrorAction SilentlyContinue
+            if ($regValue) {
+                $actualPath = $regValue.$RegistryGuid
+            }
+        }
+        catch {
+            Write-ValidationLog "Could not access user registry: $($_)" -Level Warning
         }
     }
     else {
@@ -140,30 +213,113 @@ function Get-OneDriveSyncStatus {
     
     # Try to get sync status using OneDriveLib.dll
     $dllPath = "C:\ProgramData\OneDriveRemediation\OneDriveLib.dll"
+    $statusJsonPath = "C:\ProgramData\OneDriveRemediation\OneDriveStatus.json"
     
     if (Test-Path $dllPath) {
         try {
-            Add-Type -Path $dllPath
-            $status = [OneDriveLib.StatusService]::GetStatus()
+            $isSystem = [Security.Principal.WindowsIdentity]::GetCurrent().IsSystem
             
-            if ($status) {
-                $statusObj = $status | ConvertFrom-Json
-                Write-ValidationLog "OneDrive sync status retrieved via DLL" -Level Success
+            if ($isSystem) {
+                # Running as SYSTEM - execute DLL in user context
+                Write-ValidationLog "Running OneDrive status check in user context from SYSTEM" -Level Info
                 
-                # Show all sync folders
-                foreach ($folder in $statusObj.value) {
-                    $statusColor = switch ($folder.StatusString) {
-                        'UpToDate' { 'Success' }
-                        'Syncing' { 'Info' }
-                        'Error' { 'Error' }
-                        'ReadOnly' { 'Warning' }
-                        default { 'Warning' }
+                # Create script block to run in user context
+                $scriptContent = @"
+Unblock-File 'C:\ProgramData\OneDriveRemediation\OneDriveLib.dll'
+Import-Module 'C:\ProgramData\OneDriveRemediation\OneDriveLib.dll'
+`$status = Get-ODStatus | ConvertTo-Json
+`$status | Out-File 'C:\ProgramData\OneDriveRemediation\OneDriveStatus.json' -Force
+"@
+                
+                # Find logged-in user
+                $explorerProcesses = Get-Process -Name "explorer" -ErrorAction SilentlyContinue
+                if ($explorerProcesses) {
+                    $userProcess = $explorerProcesses[0]
+                    try {
+                        $owner = (Get-WmiObject Win32_Process -Filter "ProcessId = $($userProcess.Id)").GetOwner()
+                        $username = $owner.User
+                        Write-ValidationLog "Found logged-in user: $username" -Level Info
                     }
-                    
-                    Write-ValidationLog "  $($folder.LocalPath): $($folder.StatusString)" -Level $statusColor
+                    catch {
+                        Write-ValidationLog "Could not determine logged-in user" -Level Warning
+                    }
                 }
                 
-                return $statusObj
+                # Use scheduled task to run in user context (more reliable than process spawning)
+                $taskName = "OneDriveStatusCheck_" + (Get-Random)
+                $tempScript = "$env:TEMP\$taskName.ps1"
+                $scriptContent | Out-File -FilePath $tempScript -Encoding UTF8
+                
+                try {
+                    # Create and run scheduled task
+                    $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$tempScript`""
+                    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(2)
+                    $principal = New-ScheduledTaskPrincipal -UserId "$env:COMPUTERNAME\$username" -LogonType Interactive
+                    $task = New-ScheduledTask -Action $action -Trigger $trigger -Principal $principal
+                    
+                    Register-ScheduledTask -TaskName $taskName -InputObject $task | Out-Null
+                    Start-ScheduledTask -TaskName $taskName
+                    
+                    # Wait for completion
+                    Start-Sleep -Seconds 5
+                    
+                    # Clean up
+                    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+                    Remove-Item $tempScript -ErrorAction SilentlyContinue
+                    
+                    # Read the status file
+                    if (Test-Path $statusJsonPath) {
+                        $statusContent = Get-Content $statusJsonPath -Raw
+                        $statusObj = $statusContent | ConvertFrom-Json
+                        Write-ValidationLog "OneDrive sync status retrieved via DLL in user context" -Level Success
+                        
+                        # Show all sync folders
+                        foreach ($folder in $statusObj.value) {
+                            $statusColor = switch ($folder.StatusString) {
+                                'UpToDate' { 'Success' }
+                                'Syncing' { 'Info' }
+                                'Error' { 'Error' }
+                                'ReadOnly' { 'Warning' }
+                                default { 'Warning' }
+                            }
+                            Write-ValidationLog "  $($folder.LocalPath): $($folder.StatusString)" -Level $statusColor
+                        }
+                        
+                        return $statusObj
+                    } else {
+                        Write-ValidationLog "Status file not created - DLL execution may have failed" -Level Warning
+                    }
+                }
+                catch {
+                    Write-ValidationLog "Failed to run DLL in user context: $_" -Level Warning
+                }
+            } else {
+                # Running as user - load DLL directly
+                Write-ValidationLog "Loading OneDriveLib.dll directly in user context" -Level Info
+                Unblock-File $dllPath
+                Import-Module $dllPath
+                $status = Get-ODStatus | ConvertTo-Json
+                
+                if ($status) {
+                    $statusObj = $status | ConvertFrom-Json
+                    Write-ValidationLog "OneDrive sync status retrieved via DLL" -Level Success
+                    
+                    # Show all sync folders
+                    foreach ($folder in $statusObj.value) {
+                        $statusColor = switch ($folder.StatusString) {
+                            'UpToDate' { 'Success' }
+                            'Syncing' { 'Info' }
+                            'Error' { 'Error' }
+                            'ReadOnly' { 'Warning' }
+                            default { 'Warning' }
+                        }
+                        Write-ValidationLog "  $($folder.LocalPath): $($folder.StatusString)" -Level $statusColor
+                    }
+                    
+                    return $statusObj
+                } else {
+                    Write-ValidationLog "No sync status returned from DLL" -Level Warning
+                }
             }
         }
         catch {
@@ -221,14 +377,20 @@ function Test-ActualTenantID {
 function Get-RealTenantID {
     Write-ValidationLog "Attempting to detect real Tenant ID..." -Level Info
     
-    # Method 1: Check OneDrive account registry
+    # Method 1: Check OneDrive account registry (works in SYSTEM context)
     $businessPath = "HKCU:\Software\Microsoft\OneDrive\Accounts\Business1"
+    $userBusinessPath = Get-UserRegistryPath -RegistryPath $businessPath
     
-    if (Test-Path $businessPath) {
-        $tenantIdValue = Get-ItemProperty -Path $businessPath -Name "TenantId" -ErrorAction SilentlyContinue
-        if ($tenantIdValue -and $tenantIdValue.TenantId) {
-            Write-ValidationLog "Found Tenant ID in OneDrive registry: $($tenantIdValue.TenantId)" -Level Success
-            return $tenantIdValue.TenantId
+    if ($userBusinessPath -and (Test-Path $userBusinessPath)) {
+        try {
+            $tenantIdValue = Get-ItemProperty -Path $userBusinessPath -Name "TenantId" -ErrorAction SilentlyContinue
+            if ($tenantIdValue -and $tenantIdValue.TenantId) {
+                Write-ValidationLog "Found Tenant ID in OneDrive registry: $($tenantIdValue.TenantId)" -Level Success
+                return $tenantIdValue.TenantId
+            }
+        }
+        catch {
+            Write-ValidationLog "Could not access OneDrive registry: $($_)" -Level Warning
         }
     }
     
@@ -252,6 +414,11 @@ function Get-RealTenantID {
 #endregion
 
 #region Main Validation
+# Initialize logging
+Write-ValidationLog "Starting OneDrive KFM and Files On-Demand Validation" "Info"
+Write-ValidationLog "Running as: $env:USERNAME" "Info"
+Write-ValidationLog "Log file: $LogFile" "Info"
+
 Write-Host "`n=== OneDrive KFM and Files On-Demand Validation ===" -ForegroundColor Cyan
 Write-Host "Running as: $env:USERNAME" -ForegroundColor Yellow
 Write-Host "Is SYSTEM: $([Security.Principal.WindowsIdentity]::GetCurrent().IsSystem)" -ForegroundColor Yellow
@@ -387,11 +554,8 @@ if (-not $fodEnabled) {
     $validationPassed = $false
 }
 
-Write-Host "`nOVERALL VALIDATION: $(if ($validationPassed) { 'PASSED' } else { 'FAILED' })" -ForegroundColor $(if ($validationPassed) { 'Green' } else { 'Red' })
+Write-ValidationLog "OVERALL VALIDATION: $(if ($validationPassed) { 'PASSED' } else { 'FAILED' })" $(if ($validationPassed) { 'Success' } else { 'Error' })
 
-# Keep window open if running interactively
-if ($Host.Name -eq 'ConsoleHost') {
-    Write-Host "`nPress any key to close..." -ForegroundColor Yellow
-    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
-}
+Write-Host "`nLog file saved to: $LogFile" -ForegroundColor Gray
+Write-ValidationLog "Validation completed. Log saved to: $LogFile" "Info"
 #endregion

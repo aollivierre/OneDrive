@@ -1,0 +1,76 @@
+# OneDrive RMM Scripts for Disk Space Remediation
+
+## Overview
+These scripts configure OneDrive for optimal disk space usage in preparation for Windows 11 upgrades.
+
+## Scripts
+
+### 1. Detect-OneDriveConfiguration-RMM.ps1
+- **Purpose**: Detects current OneDrive configuration state
+- **Exit Codes**: 
+  - 0 = Properly configured
+  - 1 = Remediation needed
+- **Checks**:
+  - OneDrive installation
+  - OneDrive running state
+  - Tenant ID configuration
+  - Files On-Demand enabled
+  - Known Folder Move (KFM) for all 4 folders
+
+### 2. Remediate-OneDriveConfiguration-RMM.ps1
+- **Purpose**: Applies OneDrive configuration for disk space optimization
+- **Actions**:
+  - Installs OneDrive if missing
+  - Configures tenant ID: 336dbee2-bd39-4116-b305-3105539e416f
+  - Enables Files On-Demand
+  - Configures KFM for Desktop, Documents, Pictures, Downloads
+  - Excludes PST/OST files from sync
+  - Starts OneDrive if not running
+
+## RMM Deployment
+
+### ConnectWise Automate
+1. Create Detection script:
+   - Script Type: PowerShell
+   - Exit Code Success: 0
+   - Exit Code Failure: 1
+
+2. Create Remediation script:
+   - Script Type: PowerShell
+   - Exit Code Success: 0
+
+3. Create monitor/policy:
+   - Run detection daily/weekly
+   - If detection fails, run remediation
+   - Alert on remediation failures
+
+## Testing
+
+### Test as SYSTEM (mimics RMM):
+```powershell
+.\Test-OneDriveRMM-AsSystem.ps1
+```
+
+### Simple test (current user):
+```powershell
+.\Test-OneDriveRMM-Simple.ps1
+```
+
+## Important Notes
+
+1. **SYSTEM Context**: These scripts are designed to run as SYSTEM via RMM
+2. **User Login**: Some settings take effect only after user login
+3. **Group Policy**: Scripts use Group Policy registry keys for configuration
+4. **Logs**: Check %TEMP%\OneDrive-*.log for detailed logging
+
+## Configuration Details
+
+- **Tenant ID**: 336dbee2-bd39-4116-b305-3105539e416f
+- **Registry Path**: HKLM:\SOFTWARE\Policies\Microsoft\OneDrive
+- **Key Settings**:
+  - FilesOnDemandEnabled = 1
+  - KFMSilentOptIn = [TenantID]
+  - KFMSilentOptInDesktop = 1
+  - KFMSilentOptInDocuments = 1
+  - KFMSilentOptInPictures = 1
+  - KFMSilentOptInDownloads = 1
