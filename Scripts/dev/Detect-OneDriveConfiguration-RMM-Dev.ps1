@@ -359,7 +359,7 @@ try {
             # Cleanup logging
             if ($script:LoggingEnabled) {
                 try {
-                    Stop-UniversalTranscript -ErrorAction SilentlyContinue
+                    $null = Stop-UniversalTranscript -ErrorAction SilentlyContinue
                 }
                 catch {
                     # Ignore transcript errors
@@ -662,7 +662,7 @@ Write-DetectionLog -Message "Detection completed with exit code: $script:exitCod
 # Cleanup logging
 if ($script:LoggingEnabled) {
     try {
-        Stop-UniversalTranscript -ErrorAction SilentlyContinue
+        $null = Stop-UniversalTranscript -ErrorAction SilentlyContinue
     }
     catch {
         # Ignore transcript errors

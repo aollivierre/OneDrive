@@ -367,7 +367,7 @@ try {
             # Cleanup logging
             if ($script:LoggingEnabled) {
                 try {
-                    Stop-UniversalTranscript -ErrorAction SilentlyContinue
+                    $null = Stop-UniversalTranscript -ErrorAction SilentlyContinue
                 }
                 catch {
                     # Ignore transcript errors
@@ -626,7 +626,7 @@ if (-not $script:LoggingEnabled) {
 # Cleanup logging
 if ($script:LoggingEnabled) {
     try {
-        Stop-UniversalTranscript -ErrorAction SilentlyContinue
+        $null = Stop-UniversalTranscript -ErrorAction SilentlyContinue
     }
     catch {
         # Ignore transcript errors

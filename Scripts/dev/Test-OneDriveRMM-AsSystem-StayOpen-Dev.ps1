@@ -33,9 +33,22 @@ if (-not (Test-Path $psExecPath)) {
 # Script paths
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# Use the SINGLE detection script (no more versions!)
-$detectionScript = Join-Path $scriptPath "Detect-OneDriveConfiguration-RMM.ps1"
-$remediationScript = Join-Path $scriptPath "Remediate-OneDriveConfiguration-RMM.ps1"
+# Use the dev scripts in the same folder
+$detectionScript = Join-Path $scriptPath "Detect-OneDriveConfiguration-RMM-Dev.ps1"
+$remediationScript = Join-Path $scriptPath "Remediate-OneDriveConfiguration-RMM-Dev.ps1"
+
+# Verify scripts exist
+if (-not (Test-Path $detectionScript)) {
+    Write-Host "ERROR: Detection script not found at: $detectionScript" -ForegroundColor Red
+    Write-Host "Current directory: $scriptPath" -ForegroundColor Yellow
+    Write-Host "Available files:" -ForegroundColor Yellow
+    Get-ChildItem $scriptPath -Filter "*.ps1" | ForEach-Object { Write-Host "  $_" }
+    exit 1
+}
+if (-not (Test-Path $remediationScript)) {
+    Write-Host "ERROR: Remediation script not found at: $remediationScript" -ForegroundColor Red
+    exit 1
+}
 
 function Test-ScriptAsSystem {
     param(

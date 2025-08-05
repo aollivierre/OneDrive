@@ -1,48 +1,78 @@
-# OneDrive Enterprise Automation Scripts
+# OneDrive RMM Automation Scripts
 
-A comprehensive collection of PowerShell scripts for OneDrive for Business automation, focusing on enterprise deployment, Known Folder Move (KFM), Files On-Demand, and Windows 11 upgrade disk space remediation.
+A comprehensive PowerShell automation solution for OneDrive for Business deployment and configuration through RMM tools. Features enterprise-grade logging, SYSTEM context support, and dual-version architecture for development and production use.
 
 ## 🎯 Purpose
 
-These scripts are designed to help IT administrators:
-- Automate OneDrive deployment and configuration at scale
-- Enable Known Folder Move (KFM) silently across the organization
-- Configure Files On-Demand to save disk space
-- Prepare Windows 10 devices for Windows 11 upgrade by freeing disk space
-- Monitor OneDrive sync status across endpoints
-- Redirect user folders including Downloads to OneDrive
+These scripts provide enterprise IT administrators with:
+- **RMM-Ready Deployment**: Detection and remediation scripts designed for RMM tools
+- **Dual Version Architecture**: Development scripts with modular logging and production scripts with embedded logging
+- **SYSTEM Context Support**: Full functionality when running as SYSTEM (typical for RMM deployments)
+- **Known Folder Move (KFM)**: Silent configuration including Desktop, Documents, Pictures, and Downloads
+- **Files On-Demand**: Automatic enablement to save disk space
+- **Tenant Auto-Detection**: Automatically discovers tenant ID from multiple sources
+- **Universal Logging**: Advanced logging module with line number tracking and proper error handling
 
 ## 📁 Repository Structure
 
 ```
 OneDrive/
-├── Examples/                    # Production-tested example scripts
-├── Scripts/                     # Main automation scripts
-├── Modules/                     # PowerShell modules
-├── Documentation/               # Detailed documentation
-└── Tests/                       # Test scripts and validation
+├── Scripts/
+│   ├── src/                     # Production scripts (embedded logging)
+│   │   ├── Detect-OneDriveConfiguration-RMM-Production.ps1
+│   │   ├── Remediate-OneDriveConfiguration-RMM-Production.ps1
+│   │   └── Test-OneDriveRMM-AsSystem-StayOpen-Production.ps1
+│   ├── dev/                     # Development scripts (modular logging)
+│   │   ├── Detect-OneDriveConfiguration-RMM-Dev.ps1
+│   │   ├── Remediate-OneDriveConfiguration-RMM-Dev.ps1
+│   │   └── Test-OneDriveRMM-AsSystem-StayOpen-Dev.ps1
+│   ├── logging/                 # Universal logging module
+│   │   └── logging.psm1         # v3.0.0 with line number tracking
+│   └── Archive/                 # Historical versions and backups
+├── Claude-History/              # Development history and documentation
+└── Documentation/               # Additional documentation
 ```
 
-## 🚀 Key Features
+## 🚀 Key Scripts Overview
 
-### Detection & Monitoring
-- Check OneDrive installation status
-- Monitor sync status (syncing, complete, error states)
-- Verify KFM and Files On-Demand configuration
-- Run from SYSTEM context (RMM-friendly)
+### Production Scripts (Scripts/src/)
+These scripts have the entire logging module embedded within them for standalone RMM deployment:
 
-### Configuration & Remediation
-- Silent account configuration
-- Enable Known Folder Move for Desktop, Documents, Pictures
-- Custom Downloads folder redirection
-- Files On-Demand activation
-- Registry-based policy configuration
+1. **Detect-OneDriveConfiguration-RMM-Production.ps1**
+   - Detects OneDrive configuration status
+   - Returns exit code 0 (configured) or 1 (needs remediation)
+   - Outputs RMM-friendly key-value pairs
+   - Runs silently by default, use `-EnableDebug` for verbose output
 
-### Disk Space Management
-- Free up space for Windows 11 upgrades
-- Convert files to online-only (Files On-Demand)
-- Backup user data before conversion
-- Calculate potential space savings
+2. **Remediate-OneDriveConfiguration-RMM-Production.ps1**
+   - Configures OneDrive with all enterprise settings
+   - Enables KFM for all folders including Downloads
+   - Configures Files On-Demand and Storage Sense
+   - Auto-detects tenant ID from multiple sources
+
+3. **Test-OneDriveRMM-AsSystem-StayOpen-Production.ps1**
+   - Test wrapper for production scripts
+   - Runs scripts as SYSTEM with PSExec
+   - Keeps windows open for debugging
+   - Use `-NoDebug` to simulate RMM execution
+
+### Development Scripts (Scripts/dev/)
+These scripts import the logging module for easier development and debugging:
+
+1. **Detect-OneDriveConfiguration-RMM-Dev.ps1**
+   - Same functionality as production detection
+   - Imports logging module from Scripts/logging/
+   - Easier to modify during development
+
+2. **Remediate-OneDriveConfiguration-RMM-Dev.ps1**
+   - Same functionality as production remediation
+   - Imports logging module for cleaner code
+   - Use for testing new features
+
+3. **Test-OneDriveRMM-AsSystem-StayOpen-Dev.ps1**
+   - Test wrapper for development scripts
+   - Identical to production wrapper but points to dev scripts
+   - Use for development and testing
 
 ## 🛠️ Requirements
 
@@ -54,82 +84,114 @@ OneDrive/
 
 ## 📖 Quick Start
 
-### Basic OneDrive Configuration
+### For RMM Deployment (Production)
 ```powershell
-# Configure OneDrive with KFM and Files On-Demand
-.\Scripts\Configure-OneDriveKFM.ps1 -TenantID "your-tenant-id"
+# Detection script - returns 0 if configured, 1 if needs remediation
+& "C:\Scripts\Detect-OneDriveConfiguration-RMM-Production.ps1"
+
+# Remediation script - configures OneDrive with all settings
+& "C:\Scripts\Remediate-OneDriveConfiguration-RMM-Production.ps1" -TenantId "your-tenant-id"
+
+# Or let it auto-detect the tenant ID
+& "C:\Scripts\Remediate-OneDriveConfiguration-RMM-Production.ps1"
 ```
 
-### Monitor OneDrive Status
+### For Testing (Development)
 ```powershell
-# Check OneDrive sync status from RMM
-.\Scripts\Get-OneDriveStatus.ps1
+# Test as SYSTEM with debug output
+& "C:\code\OneDrive\Scripts\src\Test-OneDriveRMM-AsSystem-StayOpen-Production.ps1"
+
+# Test in production mode (minimal output)
+& "C:\code\OneDrive\Scripts\src\Test-OneDriveRMM-AsSystem-StayOpen-Production.ps1" -NoDebug
+
+# Test detection only
+& "C:\code\OneDrive\Scripts\src\Test-OneDriveRMM-AsSystem-StayOpen-Production.ps1" -DetectionOnly
 ```
 
-### Enable Files On-Demand
-```powershell
-# Convert all files to online-only to save space
-.\Scripts\Enable-FilesOnDemand.ps1 -FreeSpaceTarget 32GB
-```
+## 🔧 Key Features
 
-## 📚 Documentation
+### Detection Capabilities
+- OneDrive installation and running status
+- Tenant ID configuration and validation
+- Known Folder Move (KFM) status for all folders
+- Files On-Demand configuration
+- Storage Sense integration
+- Silent account configuration (SilentAccountConfig)
+- Personal sync restrictions
 
-- [Deployment Guide](./Documentation/DeploymentGuide.md)
-- [RMM Integration](./Documentation/RMMIntegration.md)
-- [Troubleshooting](./Documentation/Troubleshooting.md)
-- [Best Practices](./Documentation/BestPractices.md)
+### Remediation Capabilities
+- Silent OneDrive installation (optional)
+- Automatic tenant ID detection from:
+  - Current OneDrive configuration
+  - User's email domain
+  - Registry policies
+  - System management data
+- KFM enablement for Desktop, Documents, Pictures, and Downloads
+- Files On-Demand activation
+- Storage Sense configuration
+- Personal account blocking
+- Comprehensive registry policy application
 
-## 🔧 Script Categories
-
-### Core Scripts
-- **Configure-OneDriveKFM.ps1** - Main configuration script for KFM and policies
-- **Get-OneDriveStatus.ps1** - Monitor sync status from SYSTEM context
-- **Enable-FilesOnDemand.ps1** - Activate and manage Files On-Demand
-- **Backup-UserData.ps1** - Backup user files before operations
-
-### Utility Scripts
-- **Download-OneDriveLib.ps1** - Download required DLL files
-- **Clear-OneDriveCache.ps1** - Clear OneDrive cache
-- **Test-OneDriveHealth.ps1** - Comprehensive health check
-
-### Migration Scripts
-- **Migrate-ToOneDrive.ps1** - Migrate local folders to OneDrive
-- **Redirect-DownloadsFolder.ps1** - Redirect Downloads folder
+### Logging Features
+- Universal logging module v3.0.0
+- Automatic line number tracking
+- Call stack analysis
+- SYSTEM context support
+- CSV and transcript logging
+- Configurable log levels
+- RMM-friendly output formatting
 
 ## 🏢 Enterprise Deployment
 
-### Intune
-```powershell
-# Deploy via Intune Win32 app
-.\Deploy-OneDriveConfig.intunewin
-```
+### RMM Tools (Recommended)
+Deploy the production scripts directly through your RMM platform:
+- **ConnectWise Automate**: Import as PowerShell scripts
+- **NinjaRMM**: Create script policies
+- **Datto RMM**: Add as components
+- **N-able N-central**: Deploy as automation policies
 
-### SCCM/ConfigMgr
+### Configuration Options
 ```powershell
-# Deploy via Configuration Manager
-.\Deploy-OneDriveConfig.ps1 -DeploymentMethod SCCM
-```
+# Basic deployment with auto-detection
+& "Remediate-OneDriveConfiguration-RMM-Production.ps1"
 
-### RMM Tools
-- ConnectWise Automate
-- NinjaRMM
-- Datto RMM
-- N-able N-central
+# Specify tenant ID explicitly
+& "Remediate-OneDriveConfiguration-RMM-Production.ps1" -TenantId "336dbee2-bd39-4116-b305-3105539e416f"
+
+# Configuration only mode (skip OneDrive installation)
+& "Remediate-OneDriveConfiguration-RMM-Production.ps1" -ConfigurationOnly
+
+# Skip auto-detection and require explicit tenant ID
+& "Remediate-OneDriveConfiguration-RMM-Production.ps1" -SkipAutoDetection -TenantId "your-tenant-id"
+```
 
 ## ⚠️ Important Notes
 
-1. **Test First**: Always test in a pilot group before organization-wide deployment
-2. **Backup**: Ensure users have backups before enabling KFM
-3. **Network**: Consider network bandwidth when deploying to many devices
-4. **Licensing**: Requires appropriate Microsoft 365 licenses
+1. **Dual Version System**: 
+   - Use production scripts (src/) for RMM deployment
+   - Use development scripts (dev/) for testing and development
+   - Both versions are functionally identical
+
+2. **SYSTEM Context**: Scripts are designed to work when run as SYSTEM
+   - Automatically detects logged-in users
+   - Finds user profiles and registry hives
+   - Handles both user and machine policies
+
+3. **Logging Locations**:
+   - User context: `%TEMP%\OneDrive-*.log`
+   - SYSTEM context: `C:\ProgramData\OneDriveRMM\Logs\`
+   - Transcripts and CSV logs are automatically created
+
+4. **Downloads Folder KFM**: Requires OneDrive client version 23.174.0827.0001 or later
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Test thoroughly
-4. Submit a pull request
+1. Use the dev scripts for development
+2. Test thoroughly with the test wrappers
+3. Ensure changes work in SYSTEM context
+4. Update both dev and production versions
+5. Submit a pull request
 
 ## 📄 License
 
@@ -137,9 +199,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Microsoft OneDrive team for official documentation
-- PowerShell community for script contributions
-- IT professionals who shared their experiences
+- [Microsoft OneDrive Documentation](https://docs.microsoft.com/en-us/onedrive/)
+- [CyberDrain OneDrive Scripts](https://www.cyberdrain.com/automating-with-powershell-deploying-onedrive-and-known-folder-move/)
+- [MSEndpointMgr OneDrive Articles](https://msendpointmgr.com/onedrive/)
+- PowerShell community for logging best practices
+- IT professionals who provided feedback and testing
 
 ## 📞 Support
 
