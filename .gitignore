@@ -87,5 +87,9 @@ docs/_site/
 /create-github-repo.ps1
 github_token.txt
 pat_token.txt
+<<<<<<< Updated upstream
 git-diff.txt
+=======
+>>>>>>> Stashed changes
 nul
+git-diff.txt

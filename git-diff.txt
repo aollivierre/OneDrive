@@ -1,0 +1,2469 @@
+﻿diff --git a/Scripts/Detect-OneDriveConfiguration-RMM-v2.ps1 b/.archive/Detect-OneDriveConfiguration-RMM-v2.ps1
+similarity index 100%
+rename from Scripts/Detect-OneDriveConfiguration-RMM-v2.ps1
+rename to .archive/Detect-OneDriveConfiguration-RMM-v2.ps1
+diff --git a/Scripts/Detect-OneDriveConfiguration-RMM-v3.ps1 b/.archive/Detect-OneDriveConfiguration-RMM-v3.ps1
+similarity index 100%
+rename from Scripts/Detect-OneDriveConfiguration-RMM-v3.ps1
+rename to .archive/Detect-OneDriveConfiguration-RMM-v3.ps1
+diff --git a/Scripts/Detect-OneDriveConfiguration-RMM-v4-SystemAware.ps1 b/.archive/Detect-OneDriveConfiguration-RMM-v4-SystemAware.ps1
+similarity index 100%
+rename from Scripts/Detect-OneDriveConfiguration-RMM-v4-SystemAware.ps1
+rename to .archive/Detect-OneDriveConfiguration-RMM-v4-SystemAware.ps1
+diff --git a/Scripts/Remediate-OneDriveConfiguration-RMM-v2.ps1 b/.archive/Remediate-OneDriveConfiguration-RMM-v2.ps1
+similarity index 100%
+rename from Scripts/Remediate-OneDriveConfiguration-RMM-v2.ps1
+rename to .archive/Remediate-OneDriveConfiguration-RMM-v2.ps1
+diff --git a/Scripts/Remediate-OneDriveConfiguration.ps1 b/.archive/Remediate-OneDriveConfiguration.ps1
+similarity index 100%
+rename from Scripts/Remediate-OneDriveConfiguration.ps1
+rename to .archive/Remediate-OneDriveConfiguration.ps1
+diff --git a/Scripts/Test-OneDriveRMM-AsSystem-Enhanced.ps1 b/.archive/Test-OneDriveRMM-AsSystem-Enhanced.ps1
+similarity index 100%
+rename from Scripts/Test-OneDriveRMM-AsSystem-Enhanced.ps1
+rename to .archive/Test-OneDriveRMM-AsSystem-Enhanced.ps1
+diff --git a/Scripts/Test-OneDriveRMM-AsSystem-Final.ps1 b/.archive/Test-OneDriveRMM-AsSystem-Final.ps1
+similarity index 100%
+rename from Scripts/Test-OneDriveRMM-AsSystem-Final.ps1
+rename to .archive/Test-OneDriveRMM-AsSystem-Final.ps1
+diff --git a/Scripts/Test-OneDriveRMM-AsSystem-Simple.ps1 b/.archive/Test-OneDriveRMM-AsSystem-Simple.ps1
+similarity index 100%
+rename from Scripts/Test-OneDriveRMM-AsSystem-Simple.ps1
+rename to .archive/Test-OneDriveRMM-AsSystem-Simple.ps1
+diff --git a/Scripts/Test-OneDriveRMM-AsSystem-TaskScheduler.ps1 b/.archive/Test-OneDriveRMM-AsSystem-TaskScheduler.ps1
+similarity index 100%
+rename from Scripts/Test-OneDriveRMM-AsSystem-TaskScheduler.ps1
+rename to .archive/Test-OneDriveRMM-AsSystem-TaskScheduler.ps1
+diff --git a/Scripts/Test-OneDriveRMM-AsSystem.ps1 b/.archive/Test-OneDriveRMM-AsSystem.ps1
+similarity index 100%
+rename from Scripts/Test-OneDriveRMM-AsSystem.ps1
+rename to .archive/Test-OneDriveRMM-AsSystem.ps1
+diff --git a/Scripts/Test-OneDriveRMM-Simple.ps1 b/.archive/Test-OneDriveRMM-Simple.ps1
+similarity index 100%
+rename from Scripts/Test-OneDriveRMM-Simple.ps1
+rename to .archive/Test-OneDriveRMM-Simple.ps1
+diff --git a/Scripts/Test-OneDriveScripts.ps1 b/.archive/Test-OneDriveScripts.ps1
+similarity index 100%
+rename from Scripts/Test-OneDriveScripts.ps1
+rename to .archive/Test-OneDriveScripts.ps1
+diff --git a/Scripts/Test-OneDriveSimple.ps1 b/.archive/Test-OneDriveSimple.ps1
+similarity index 100%
+rename from Scripts/Test-OneDriveSimple.ps1
+rename to .archive/Test-OneDriveSimple.ps1
+diff --git a/Scripts/Test-OneDriveValidation-DMU-Style.ps1 b/.archive/Test-OneDriveValidation-DMU-Style.ps1
+similarity index 100%
+rename from Scripts/Test-OneDriveValidation-DMU-Style.ps1
+rename to .archive/Test-OneDriveValidation-DMU-Style.ps1
+diff --git a/Scripts/Test-OneDriveValidation-Interactive.ps1 b/.archive/Test-OneDriveValidation-Interactive.ps1
+similarity index 100%
+rename from Scripts/Test-OneDriveValidation-Interactive.ps1
+rename to .archive/Test-OneDriveValidation-Interactive.ps1
+diff --git a/Save-GitDiff-txt.ps1 b/Save-GitDiff-txt.ps1
+new file mode 100644
+index 0000000..fe666f4
+--- /dev/null
++++ b/Save-GitDiff-txt.ps1
+@@ -0,0 +1,203 @@
++#requires -Version 5.1
++
++<#
++.SYNOPSIS
++    Saves git diff output to a file.
++
++.DESCRIPTION
++    This script runs 'git add --all' to stage all changes, then runs 'git diff --cached' 
++    and saves the output to a specified file. The script confirms the repository and branch
++    with the user before proceeding.
++
++.PARAMETER OutputFile
++    The path to the file where the git diff output will be saved.
++    Default is 'git-diff.txt' in the current directory.
++
++.PARAMETER SkipConfirmation
++    If specified, skips the confirmation step.
++
++.EXAMPLE
++    .\Save-GitDiff.ps1
++    Saves the git diff output to git-diff.txt in the current directory.
++
++.EXAMPLE
++    .\Save-GitDiff.ps1 -OutputFile "C:\temp\my-changes.diff"
++    Saves the git diff output to the specified file path.
++
++.EXAMPLE
++    .\Save-GitDiff.ps1 -SkipConfirmation
++    Skips the confirmation step and proceeds directly.
++#>
++
++[CmdletBinding()]
++param (
++    [Parameter(Position = 0)]
++    [string]$OutputFile = "git-diff.txt",
++    
++    [Parameter()]
++    [switch]$SkipConfirmation
++)
++
++# Verify git is installed
++try {
++    $null = Get-Command git -ErrorAction Stop
++}
++catch {
++    Write-Error "Git is not installed or not in the PATH. Please install Git or add it to your PATH."
++    exit 1
++}
++
++# Verify we're in a git repository
++if (-not (Test-Path -Path ".git" -PathType Container)) {
++    Write-Error "This directory is not a git repository. Please run this script from a git repository."
++    exit 1
++}
++
++# Get repository and branch information
++try {
++    $repoName = Split-Path -Path (git rev-parse --show-toplevel) -Leaf
++    $currentBranch = git rev-parse --abbrev-ref HEAD
++}
++catch {
++    Write-Error "Failed to get repository information: $_"
++    exit 1
++}
++
++# Confirm with user
++if (-not $SkipConfirmation) {
++    Write-Host "Current repository: $repoName" -ForegroundColor Cyan
++    Write-Host "Current branch: $currentBranch" -ForegroundColor Cyan
++    
++    # Get list of staged and unstaged changes
++    $allChanges = git status --porcelain
++    
++    # Filter for unstaged changes (those not fully staged)
++    $unstagedChanges = $allChanges | Where-Object { 
++        $_ -match '^.[MADRCU?]' -or $_ -match '^\?\?' 
++    }
++    
++    # Filter for already staged changes
++    $stagedChanges = $allChanges | Where-Object { 
++        $_ -match '^[MADRCU]' -and $_ -notmatch '^.[MADRCU?]' 
++    }
++    
++    $unstagedCount = ($unstagedChanges | Measure-Object).Count
++    $stagedCount = ($stagedChanges | Measure-Object).Count
++    
++    # Show already staged changes
++    if ($stagedCount -gt 0) {
++        Write-Host "`nAlready staged changes ($stagedCount):" -ForegroundColor Green
++        $stagedChanges | ForEach-Object {
++            $status = $_.Substring(0, 2)
++            $file = $_.Substring(3)
++            
++            $statusText = switch -Regex ($status) {
++                '^M.'   { "Modified:   " }
++                '^A.'   { "Added:      " }
++                '^D.'   { "Deleted:    " }
++                '^R.'   { "Renamed:    " }
++                '^C.'   { "Copied:     " }
++                default { "Changed:    " }
++            }
++            
++            Write-Host "  $statusText$file" -ForegroundColor DarkGreen
++        }
++    }
++    
++    # Show new changes to be staged
++    Write-Host "`nNew changes to be staged ($unstagedCount):" -ForegroundColor Yellow
++    if ($unstagedCount -gt 0) {
++        $unstagedChanges | ForEach-Object {
++            $status = $_.Substring(0, 2)
++            $file = $_.Substring(3)
++            
++            $statusText = switch -Regex ($status) {
++                '^\?\?' { "Untracked:  " }
++                '^.M'   { "Modified:   " }
++                '^.A'   { "Added:      " }
++                '^.D'   { "Deleted:    " }
++                '^.R'   { "Renamed:    " }
++                '^.C'   { "Copied:     " }
++                default { "Changed:    " }
++            }
++            
++            Write-Host "  $statusText$file"
++        }
++    } else {
++        Write-Host "  No new changes to stage" -ForegroundColor Gray
++    }
++    
++    # If no changes at all
++    if ($stagedCount -eq 0 -and $unstagedCount -eq 0) {
++        Write-Host "  No changes detected in this repository" -ForegroundColor Gray
++    }
++    
++    Write-Host "`nThis script will stage all changes with 'git add --all' and save the diff to $OutputFile" -ForegroundColor Yellow
++    
++    $confirmation = Read-Host -Prompt "Do you want to proceed? (Y/N)"
++    if ($confirmation -ne 'Y' -and $confirmation -ne 'y') {
++        Write-Host "Operation cancelled by user." -ForegroundColor Red
++        exit 0
++    }
++}
++
++# Stage all changes
++try {
++    Write-Verbose "Staging all changes with 'git add --all'"
++    git add --all
++    
++    # Unstage the output file if it was staged
++    # This prevents the output file from being part of the diff
++    if (Test-Path -Path $OutputFile) {
++        Write-Verbose "Unstaging output file: $OutputFile"
++        git reset HEAD $OutputFile
++    }
++    
++    Write-Host "All changes have been staged (except the output file)" -ForegroundColor Green
++}
++catch {
++    Write-Error "An error occurred while staging changes: $_"
++    exit 1
++}
++
++# Get the git diff and save it to the file
++try {
++    Write-Verbose "Running 'git diff --cached' and saving to $OutputFile"
++    
++    # First, remove the file if it exists - with extra verification
++    if (Test-Path -Path $OutputFile) {
++        try {
++            Remove-Item -Path $OutputFile -Force -ErrorAction Stop
++            Write-Verbose "Removed existing file: $OutputFile"
++            # Verify removal
++            if (Test-Path -Path $OutputFile) {
++                Write-Error "Failed to remove existing file: $OutputFile"
++                exit 1
++            }
++        }
++        catch {
++            Write-Error "Error removing file: $_"
++            exit 1
++        }
++    }
++    
++    # Get the diff content
++    $diffOutput = git diff --cached
++    
++    # Create a new file with the diff content
++    if ($null -eq $diffOutput -or $diffOutput -eq '') {
++        Write-Warning "No staged changes found. The output file will be empty."
++        # Create an empty file
++        Set-Content -Path $OutputFile -Value "" -Force
++    } else {
++        # Restore original behavior but ensure we're creating a new file
++        # This preserves line breaks properly
++        Set-Content -Path $OutputFile -Value $diffOutput -Encoding UTF8 -Force
++    }
++    
++    Write-Host "Git diff output saved to $OutputFile"
++}
++catch {
++    Write-Error "An error occurred while running git diff: $_"
++    exit 1
++} 
+\ No newline at end of file
+diff --git a/Scripts/Detect-OneDriveConfiguration-RMM-Production.ps1 b/Scripts/Detect-OneDriveConfiguration-RMM-Production.ps1
+new file mode 100644
+index 0000000..3f3b805
+--- /dev/null
++++ b/Scripts/Detect-OneDriveConfiguration-RMM-Production.ps1
+@@ -0,0 +1,672 @@
++#Requires -Version 5.1
++
++[CmdletBinding()]
++param(
++    [Parameter(Mandatory = $false)]
++    [switch]$EnableDebug = $false,
++    
++    [Parameter(Mandatory = $false)]
++    [switch]$ConfigurationOnly = $false,
++    
++    [Parameter(Mandatory = $false)]
++    [string]$ExpectedTenantId = ""
++)
++
++<#
++.SYNOPSIS
++    OneDrive Configuration Detection Script for RMM
++    
++.DESCRIPTION
++    Detects OneDrive configuration for disk space optimization.
++    Properly handles SYSTEM context by detecting logged-in users.
++    
++    Exit Codes:
++    0 = Properly configured (no remediation needed)
++    1 = Remediation required
++    
++.PARAMETER ConfigurationOnly
++    When specified, returns success (0) if OneDrive is not installed.
++    Use this in environments where OneDrive deployment is handled separately.
++    
++.PARAMETER ExpectedTenantId
++    The tenant ID to check for in OneDrive configuration.
++    If not specified, script will only check if ANY tenant is configured.
++    Example: "336dbee2-bd39-4116-b305-3105539e416f"
++    
++.NOTES
++    Version: 1.2
++    Author: OneDrive RMM Detection
++    For production use, consider -ConfigurationOnly parameter
++#>
++
++# Set strict mode for better error handling
++Set-StrictMode -Version Latest
++$ErrorActionPreference = "Stop"
++
++# Debug output to verify script is running
++if ($EnableDebug) {
++    Write-Host "[DEBUG] Detection script started with EnableDebug = $EnableDebug" -ForegroundColor Cyan
++}
++
++# Initialize variables
++$script:exitCode = 1  # Default to remediation required
++$script:outputData = @{
++    OneDrive_Status = "CHECKING"
++    OneDrive_Reason = "Initializing"
++    OneDrive_CheckDate = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
++    OneDrive_Installed = "NO"
++    OneDrive_Running = "NO"
++    OneDrive_TenantConfigured = "NO"
++    OneDrive_FilesOnDemand = "NO"
++    OneDrive_KFMConfigured = "NO"
++    OneDrive_StorageSense = "NO"
++    OneDrive_AutoLogin = "NO"
++    OneDrive_DisablePersonalSync = "NO"
++}
++
++#region Logging Module Configuration
++# Import logging module - use local copy only
++$LoggingModulePath = Join-Path $PSScriptRoot "logging\logging.psm1"
++$script:LoggingEnabled = $false
++$script:LoggingMode = if ($EnableDebug) { 'EnableDebug' } else { 'SilentMode' }
++
++if (Test-Path $LoggingModulePath) {
++    try {
++        if ($EnableDebug) {
++            Write-Host "[DEBUG] Found logging module at: $LoggingModulePath" -ForegroundColor Cyan
++        }
++        
++        Import-Module $LoggingModulePath -Force -WarningAction SilentlyContinue
++        $script:LoggingEnabled = $true
++        
++        if ($EnableDebug) {
++            Write-Host "[DEBUG] Logging module imported successfully" -ForegroundColor Cyan
++            Write-Host "[DEBUG] LoggingMode: $script:LoggingMode" -ForegroundColor Cyan
++        }
++        
++        # Initialize logging
++        Initialize-Logging -BaseLogPath "C:\ProgramData\OneDriveDetection\Logs" `
++                          -JobName "OneDriveDetection" `
++                          -ParentScriptName "Detect-OneDriveConfiguration-RMM"
++        
++        # Set global EnableDebug for logging module
++        $global:EnableDebug = $EnableDebug
++        
++        if ($EnableDebug) {
++            Write-Host "[DEBUG] Logging initialized. Global EnableDebug = $($global:EnableDebug)" -ForegroundColor Cyan
++        }
++        
++        # Test direct call with debug
++        if ($EnableDebug) {
++            Write-Host "[DEBUG TEST] About to call Write-AppDeploymentLog with Mode: $script:LoggingMode" -ForegroundColor Yellow
++            Write-Host "[DEBUG TEST] Global EnableDebug: $($global:EnableDebug)" -ForegroundColor Yellow
++        }
++        
++        Write-AppDeploymentLog -Message "OneDrive Detection Script Started" -Level "INFO" -Mode $script:LoggingMode
++        Write-AppDeploymentLog -Message "Computer: $env:COMPUTERNAME" -Level "INFO" -Mode $script:LoggingMode
++        
++        # Get user context
++        $userContext = Get-CurrentUser
++        Write-AppDeploymentLog -Message "User: $($userContext.UserName) (Type: $($userContext.UserType))" -Level "INFO" -Mode $script:LoggingMode
++        
++        if ($EnableDebug) {
++            Write-Host "[DEBUG] First log messages written" -ForegroundColor Cyan
++        }
++    }
++    catch {
++        $script:LoggingEnabled = $false
++        if ($EnableDebug) {
++            Write-Host "[DEBUG ERROR] Logging initialization failed: $_" -ForegroundColor Red
++            Write-Host "[DEBUG ERROR] Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
++        }
++    }
++}
++else {
++    if ($EnableDebug) {
++        Write-Host "[DEBUG WARNING] Logging module not found at: $LoggingModulePath" -ForegroundColor Yellow
++    }
++}
++#endregion
++
++#region Helper Functions
++function Write-DetectionLog {
++    param(
++        [string]$Message,
++        [ValidateSet('INFO', 'WARNING', 'ERROR', 'DEBUG')]
++        [string]$Level = 'INFO'
++    )
++    
++    # Get the calling line number
++    $callStack = Get-PSCallStack
++    $lineNumber = if ($callStack.Count -ge 2) { $callStack[1].ScriptLineNumber } else { 0 }
++    
++    if ($script:LoggingEnabled) {
++        try {
++            # Force EnableDebug mode if global debug is set
++            $actualMode = if ($global:EnableDebug) { 'EnableDebug' } else { $script:LoggingMode }
++            Write-AppDeploymentLog -Message $Message -Level $Level -Mode $actualMode
++        }
++        catch {
++            # Logging failed, continue
++        }
++    }
++    else {
++        # Only write to console if logging module is not available AND debug is enabled
++        if ($EnableDebug) {
++            $color = switch ($Level) {
++                'ERROR' { 'Red' }
++                'WARNING' { 'Yellow' }
++                'DEBUG' { 'Gray' }
++                default { 'White' }
++            }
++            Write-Host "[$Level] $Message" -ForegroundColor $color
++        }
++    }
++}
++
++function Write-DetectionError {
++    param(
++        [string]$Message,
++        [System.Management.Automation.ErrorRecord]$ErrorRecord = $null
++    )
++    
++    $errorMessage = $Message
++    if ($ErrorRecord) {
++        $errorMessage += " | Error: $($ErrorRecord.Exception.Message)"
++        $errorMessage += " | ScriptStackTrace: $($ErrorRecord.ScriptStackTrace)"
++    }
++    
++    Write-DetectionLog -Message $errorMessage -Level 'ERROR'
++}
++
++function Get-LoggedInUser {
++    Write-DetectionLog -Message "Detecting logged-in user..." -Level 'DEBUG'
++    
++    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
++    $isSystem = $currentUser.IsSystem
++    
++    Write-DetectionLog -Message "Running as: $($currentUser.Name) (IsSystem: $isSystem)" -Level 'DEBUG'
++    
++    if ($isSystem) {
++        # Running as SYSTEM - find logged-in user
++        try {
++            # Method 1: Check explorer.exe owner
++            $explorer = Get-WmiObject Win32_Process -Filter "Name='explorer.exe'" | Select-Object -First 1
++            if ($explorer) {
++                $owner = $explorer.GetOwner()
++                if ($owner.ReturnValue -eq 0) {
++                    Write-DetectionLog -Message "Found user via explorer.exe: $($owner.User)" -Level 'DEBUG'
++                    return $owner.User
++                }
++            }
++            
++            # Method 2: Check console session
++            $sessions = quser 2>$null | Where-Object { $_ -match '^\s*(\S+)\s+console' }
++            if ($sessions) {
++                $username = ($sessions -split '\s+')[1]
++                Write-DetectionLog -Message "Found user via console: $username" -Level 'DEBUG'
++                return $username
++            }
++        }
++        catch {
++            Write-DetectionError -Message "Error detecting logged-in user" -ErrorRecord $_
++        }
++        
++        Write-DetectionLog -Message "No logged-in user found (SYSTEM context)" -Level 'WARNING'
++        return $null
++    }
++    else {
++        return $env:USERNAME
++    }
++}
++
++function Get-UserProfilePath {
++    param([string]$Username)
++    
++    if (-not $Username) { return $env:USERPROFILE }
++    
++    $profilePath = "C:\Users\$Username"
++    if (Test-Path $profilePath) {
++        return $profilePath
++    }
++    
++    # Try registry if standard path doesn't exist
++    try {
++        $sid = (New-Object System.Security.Principal.NTAccount($Username)).Translate([System.Security.Principal.SecurityIdentifier]).Value
++        $regPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$sid"
++        if (Test-Path $regPath) {
++            $profilePath = (Get-ItemProperty $regPath).ProfileImagePath
++            if (Test-Path $profilePath) { return $profilePath }
++        }
++    }
++    catch {
++        Write-DetectionLog -Message "Failed to get profile from registry: $_" -Level 'DEBUG'
++    }
++    
++    return $null
++}
++
++function Get-OneDriveTenantId {
++    param([string]$Username)
++    
++    # Try user registry first
++    if ($Username) {
++        try {
++            $sid = (New-Object System.Security.Principal.NTAccount($Username)).Translate([System.Security.Principal.SecurityIdentifier]).Value
++            $userRegPath = "Registry::HKEY_USERS\$sid\Software\Microsoft\OneDrive\Accounts\Business1"
++            
++            if (Test-Path $userRegPath) {
++                $keys = Get-ItemProperty -Path $userRegPath -ErrorAction SilentlyContinue
++                if ($keys.ConfiguredTenantId) {
++                    return $keys.ConfiguredTenantId
++                }
++            }
++        }
++        catch {
++            Write-DetectionLog -Message "Could not access user registry: $_" -Level 'DEBUG'
++        }
++    }
++    
++    # Try HKCU if running as user
++    $businessPath = "HKCU:\Software\Microsoft\OneDrive\Accounts\Business1"
++    if (Test-Path $businessPath) {
++        $keys = Get-ItemProperty -Path $businessPath -ErrorAction SilentlyContinue
++        if ($keys.ConfiguredTenantId) {
++            return $keys.ConfiguredTenantId
++        }
++    }
++    
++    return $null
++}
++
++function Write-ConnectWiseOutput {
++    param([hashtable]$Data)
++    
++    Write-DetectionLog -Message "Writing output" -Level 'INFO'
++    Write-DetectionLog -Message "Status: $($Data.OneDrive_Status)" -Level 'INFO'
++    
++    # Build output as single string for RMM
++    $output = @(
++        "OneDrive_Status: $($Data.OneDrive_Status)",
++        "OneDrive_Reason: $($Data.OneDrive_Reason)",
++        "OneDrive_Installed: $($Data.OneDrive_Installed)",
++        "OneDrive_Running: $($Data.OneDrive_Running)",
++        "OneDrive_TenantConfigured: $($Data.OneDrive_TenantConfigured)",
++        "OneDrive_FilesOnDemand: $($Data.OneDrive_FilesOnDemand)",
++        "OneDrive_KFMConfigured: $($Data.OneDrive_KFMConfigured)",
++        "OneDrive_StorageSense: $($Data.OneDrive_StorageSense)",
++        "OneDrive_AutoLogin: $($Data.OneDrive_AutoLogin)",
++        "OneDrive_DisablePersonalSync: $($Data.OneDrive_DisablePersonalSync)",
++        "OneDrive_CheckDate: $($Data.OneDrive_CheckDate)"
++    ) -join "`n"
++    
++    Write-Output $output
++}
++#endregion
++
++# Main detection logic
++Write-DetectionLog -Message "Starting OneDrive detection" -Level 'INFO'
++
++try {
++    # Get actual user context
++    $targetUser = Get-LoggedInUser
++    $userProfile = if ($targetUser) { Get-UserProfilePath -Username $targetUser } else { $env:USERPROFILE }
++    
++    if (-not $userProfile -or -not (Test-Path $userProfile)) {
++        Write-DetectionLog -Message "Could not determine valid user profile path" -Level 'ERROR'
++        $script:outputData.OneDrive_Status = "ERROR"
++        $script:outputData.OneDrive_Reason = "No valid user profile found"
++        throw "No valid user profile found"
++    }
++    
++    Write-DetectionLog -Message "Target user: $targetUser" -Level 'INFO'
++    Write-DetectionLog -Message "User profile: $userProfile" -Level 'INFO'
++    
++    # 1. Check OneDrive Installation
++    Write-DetectionLog -Message "Checking OneDrive installation..." -Level 'INFO'
++    
++    $oneDrivePaths = @(
++        "$env:PROGRAMFILES\Microsoft OneDrive\OneDrive.exe",
++        "${env:PROGRAMFILES(x86)}\Microsoft OneDrive\OneDrive.exe",
++        "$userProfile\AppData\Local\Microsoft\OneDrive\OneDrive.exe"
++    )
++    
++    $oneDriveFound = $false
++    $oneDriveVersion = $null
++    
++    foreach ($path in $oneDrivePaths) {
++        if (Test-Path $path) {
++            $versionInfo = (Get-Item $path).VersionInfo
++            $oneDriveVersion = $versionInfo.FileVersion
++            Write-DetectionLog -Message "OneDrive found: $path (v$oneDriveVersion)" -Level 'INFO'
++            $oneDriveFound = $true
++            $script:outputData.OneDrive_Installed = "YES"
++            break
++        }
++    }
++    
++    if (-not $oneDriveFound) {
++        if ($ConfigurationOnly) {
++            Write-DetectionLog -Message "OneDrive is NOT installed - ConfigurationOnly mode, skipping detection" -Level 'INFO'
++            $script:outputData.OneDrive_Status = "NOT_APPLICABLE"
++            $script:outputData.OneDrive_Reason = "OneDrive not installed - configuration not applicable"
++            $script:exitCode = 0  # Success - nothing to configure
++            
++            # Output results and exit early
++            Write-ConnectWiseOutput -Data $script:outputData
++            Write-DetectionLog -Message "Detection completed with exit code: $script:exitCode" -Level 'INFO'
++            
++            # Cleanup logging
++            if ($script:LoggingEnabled) {
++                try {
++                    Stop-UniversalTranscript -ErrorAction SilentlyContinue
++                }
++                catch {
++                    # Ignore transcript errors
++                }
++            }
++            
++            exit $script:exitCode
++        }
++        else {
++            Write-DetectionLog -Message "OneDrive is NOT installed" -Level 'ERROR'
++            $script:outputData.OneDrive_Status = "NOT_CONFIGURED"
++            $script:outputData.OneDrive_Reason = "OneDrive not installed"
++            $script:exitCode = 1
++        }
++    }
++    
++    # 2. Check if OneDrive is Running
++    Write-DetectionLog -Message "Checking if OneDrive is running..." -Level 'INFO'
++    
++    $oneDriveProcess = Get-Process -Name "OneDrive" -ErrorAction SilentlyContinue
++    if ($oneDriveProcess) {
++        Write-DetectionLog -Message "OneDrive is running (PID: $($oneDriveProcess.Id))" -Level 'INFO'
++        $script:outputData.OneDrive_Running = "YES"
++    } else {
++        Write-DetectionLog -Message "OneDrive is NOT running" -Level 'WARNING'
++        $script:exitCode = 1
++    }
++    
++    # 3. Check Tenant ID
++    Write-DetectionLog -Message "Checking tenant ID configuration..." -Level 'INFO'
++    
++    # First check if tenant ID is in user's OneDrive config
++    $tenantId = Get-OneDriveTenantId -Username $targetUser
++    
++    # If not in user config, check if it's in policy (waiting to be applied)
++    if (-not $tenantId) {
++        $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
++        if (Test-Path $policyPath) {
++            $kfmValue = Get-ItemProperty -Path $policyPath -Name "KFMSilentOptIn" -ErrorAction SilentlyContinue
++            if ($kfmValue -and $kfmValue.KFMSilentOptIn) {
++                $tenantId = $kfmValue.KFMSilentOptIn
++                Write-DetectionLog -Message "Tenant ID found in policy (pending application): $tenantId" -Level 'WARNING'
++                Write-DetectionLog -Message "OneDrive needs to restart or user needs to log off/on to apply" -Level 'WARNING'
++            }
++        }
++    }
++    
++    if ($tenantId) {
++        Write-DetectionLog -Message "Tenant ID configured: $tenantId" -Level 'INFO'
++        
++        # If ExpectedTenantId is provided, verify it matches
++        if ($ExpectedTenantId -and $tenantId -ne $ExpectedTenantId) {
++            Write-DetectionLog -Message "Tenant ID mismatch! Expected: $ExpectedTenantId, Found: $tenantId" -Level 'ERROR'
++            $script:outputData.OneDrive_TenantConfigured = "WRONG"
++            $script:exitCode = 1
++        } else {
++            $script:outputData.OneDrive_TenantConfigured = "YES"
++            # Don't set exit code to 1 if found in policy - it's configured, just pending application
++        }
++    } else {
++        Write-DetectionLog -Message "Tenant ID not configured" -Level 'ERROR'
++        $script:exitCode = 1
++    }
++    
++    # 4. Check Files On-Demand
++    Write-DetectionLog -Message "Checking Files On-Demand (OneDrive feature)..." -Level 'INFO'
++    
++    $fodEnabled = $false
++    $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
++    
++    if (Test-Path $policyPath) {
++        $fodValue = Get-ItemProperty -Path $policyPath -Name "FilesOnDemandEnabled" -ErrorAction SilentlyContinue
++        if ($fodValue -and $fodValue.FilesOnDemandEnabled -eq 1) {
++            $fodEnabled = $true
++            Write-DetectionLog -Message "Files On-Demand: ENABLED via policy" -Level 'INFO'
++        }
++    }
++    
++    # Check version (23.066+ has it by default)
++    $script:supportsDownloadsKFM = $false
++    if ($oneDriveVersion) {
++        $version = $oneDriveVersion.Split('.')
++        if ([int]$version[0] -ge 23 -and [int]$version[1] -ge 66) {
++            $fodEnabled = $true
++            Write-DetectionLog -Message "Files On-Demand: ENABLED by default since OneDrive March 2024 (v23.066+)" -Level 'INFO'
++        }
++        
++        # Check if version supports Downloads folder KFM (23.002.0102 or higher)
++        if ([int]$version[0] -gt 23 -or ([int]$version[0] -eq 23 -and [int]$version[1] -ge 2)) {
++            $script:supportsDownloadsKFM = $true
++            Write-DetectionLog -Message "OneDrive version supports Downloads folder KFM" -Level 'INFO'
++        } else {
++            Write-DetectionLog -Message "OneDrive version does NOT support Downloads folder KFM (requires 23.002+)" -Level 'WARNING'
++        }
++    }
++    
++    if ($fodEnabled) {
++        Write-DetectionLog -Message "Files On-Demand allows files to show in File Explorer without using disk space" -Level 'INFO'
++        Write-DetectionLog -Message "Users see cloud icons: cloud=online-only, checkmark=downloaded, pin=always keep on device" -Level 'INFO'
++        $script:outputData.OneDrive_FilesOnDemand = "YES"
++    } else {
++        Write-DetectionLog -Message "Files On-Demand NOT enabled - all synced files will use local disk space" -Level 'ERROR'
++        $script:exitCode = 1
++    }
++    
++    # 5. Check KFM (simplified check)
++    Write-DetectionLog -Message "Checking Known Folder Move..." -Level 'INFO'
++    
++    $kfmConfigured = $false
++    if (Test-Path $policyPath) {
++        # Check if KFM folders are configured
++        $kfmDesktop = Get-ItemProperty -Path $policyPath -Name "KFMSilentOptInDesktop" -ErrorAction SilentlyContinue
++        $kfmDocuments = Get-ItemProperty -Path $policyPath -Name "KFMSilentOptInDocuments" -ErrorAction SilentlyContinue
++        $kfmPictures = Get-ItemProperty -Path $policyPath -Name "KFMSilentOptInPictures" -ErrorAction SilentlyContinue
++        $kfmDownloads = Get-ItemProperty -Path $policyPath -Name "KFMSilentOptInDownloads" -ErrorAction SilentlyContinue
++        
++        # Check core folders (always supported)
++        $coreKfmConfigured = ($kfmDesktop -and $kfmDesktop.KFMSilentOptInDesktop -eq 1) -and
++                            ($kfmDocuments -and $kfmDocuments.KFMSilentOptInDocuments -eq 1) -and
++                            ($kfmPictures -and $kfmPictures.KFMSilentOptInPictures -eq 1)
++        
++        # Check Downloads folder based on version support
++        $downloadsKfmConfigured = $false
++        if ($script:supportsDownloadsKFM) {
++            $downloadsKfmConfigured = ($kfmDownloads -and $kfmDownloads.KFMSilentOptInDownloads -eq 1)
++            
++            if ($coreKfmConfigured -and $downloadsKfmConfigured) {
++                $kfmConfigured = $true
++                Write-DetectionLog -Message "KFM (Known Folder Move) configured for all 4 folders:" -Level 'INFO'
++                Write-DetectionLog -Message "  - Desktop: Will redirect to OneDrive" -Level 'INFO'
++                Write-DetectionLog -Message "  - Documents: Will redirect to OneDrive" -Level 'INFO'
++                Write-DetectionLog -Message "  - Pictures: Will redirect to OneDrive" -Level 'INFO'
++                Write-DetectionLog -Message "  - Downloads: Will redirect to OneDrive" -Level 'INFO'
++                Write-DetectionLog -Message "These folders will be protected and backed up by OneDrive" -Level 'INFO'
++                $script:outputData.OneDrive_KFMConfigured = "YES"
++            }
++        } else {
++            # Version doesn't support Downloads KFM, only check core folders
++            if ($coreKfmConfigured) {
++                $kfmConfigured = $true
++                Write-DetectionLog -Message "KFM (Known Folder Move) configured for 3 core folders:" -Level 'INFO'
++                Write-DetectionLog -Message "  - Desktop: Will redirect to OneDrive" -Level 'INFO'
++                Write-DetectionLog -Message "  - Documents: Will redirect to OneDrive" -Level 'INFO'
++                Write-DetectionLog -Message "  - Pictures: Will redirect to OneDrive" -Level 'INFO'
++                Write-DetectionLog -Message "  - Downloads: NOT supported (requires OneDrive 23.002+)" -Level 'WARNING'
++                Write-DetectionLog -Message "Core folders will be protected and backed up by OneDrive" -Level 'INFO'
++                $script:outputData.OneDrive_KFMConfigured = "YES"
++            }
++        }
++    }
++    
++    if (-not $kfmConfigured) {
++        if ($script:supportsDownloadsKFM) {
++            Write-DetectionLog -Message "KFM not configured for all required folders" -Level 'WARNING'
++        } else {
++            Write-DetectionLog -Message "KFM not configured for core folders (Desktop/Documents/Pictures)" -Level 'WARNING'
++        }
++        $script:exitCode = 1
++    }
++    
++    # 6. Check Storage Sense
++    Write-DetectionLog -Message "Checking Storage Sense (Windows disk space management feature)..." -Level 'INFO'
++    
++    $storageSenseEnabled = $false
++    $storagePolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\StorageSense"
++    
++    if (Test-Path $storagePolicyPath) {
++        $ssEnabled = Get-ItemProperty -Path $storagePolicyPath -Name "AllowStorageSenseGlobal" -ErrorAction SilentlyContinue
++        if ($ssEnabled -and $ssEnabled.AllowStorageSenseGlobal -eq 1) {
++            $storageSenseEnabled = $true
++            Write-DetectionLog -Message "Storage Sense: ENABLED (Windows feature, not OneDrive)" -Level 'INFO'
++            Write-DetectionLog -Message "Storage Sense is a Windows 10/11 feature that automatically manages disk space" -Level 'INFO'
++            $script:outputData.OneDrive_StorageSense = "YES"
++            
++            $dehydration = Get-ItemProperty -Path $storagePolicyPath -Name "ConfigStorageSenseCloudContentDehydrationThreshold" -ErrorAction SilentlyContinue
++            if ($dehydration) {
++                $days = $dehydration.ConfigStorageSenseCloudContentDehydrationThreshold
++                Write-DetectionLog -Message "Storage Sense auto-conversion configured:" -Level 'INFO'
++                Write-DetectionLog -Message "  - Files unused for $days days will convert to online-only" -Level 'INFO'
++                Write-DetectionLog -Message "  - This means files remain in OneDrive but don't use local disk space" -Level 'INFO'
++                Write-DetectionLog -Message "  - Users can still access files - they download on-demand when opened" -Level 'INFO'
++                Write-DetectionLog -Message "  - This is different from Files On-Demand which just enables the feature" -Level 'INFO'
++            }
++        }
++    }
++    
++    if (-not $storageSenseEnabled) {
++        Write-DetectionLog -Message "Storage Sense NOT enabled - disk space won't be automatically freed" -Level 'WARNING'
++    }
++    
++    # 7. Check Silent Account Configuration (Auto-login)
++    Write-DetectionLog -Message "Checking OneDrive auto-login configuration..." -Level 'INFO'
++    
++    $autoLoginEnabled = $false
++    if (Test-Path $policyPath) {
++        $silentConfig = Get-ItemProperty -Path $policyPath -Name "SilentAccountConfig" -ErrorAction SilentlyContinue
++        if ($silentConfig -and $silentConfig.SilentAccountConfig -eq 1) {
++            $autoLoginEnabled = $true
++            Write-DetectionLog -Message "Silent Account Config: ENABLED - users will auto-login with Windows credentials" -Level 'INFO'
++            $script:outputData.OneDrive_AutoLogin = "YES"
++        }
++    }
++    
++    if (-not $autoLoginEnabled) {
++        Write-DetectionLog -Message "Silent Account Config NOT enabled - users must manually sign in to OneDrive" -Level 'WARNING'
++        $script:exitCode = 1
++    }
++    
++    # 8. Check Disable Personal Sync (Security setting)
++    Write-DetectionLog -Message "Checking personal OneDrive account blocking..." -Level 'INFO'
++    
++    $personalSyncDisabled = $false
++    if (Test-Path $policyPath) {
++        $disablePersonal = Get-ItemProperty -Path $policyPath -Name "DisablePersonalSync" -ErrorAction SilentlyContinue
++        if ($disablePersonal -and $disablePersonal.DisablePersonalSync -eq 1) {
++            $personalSyncDisabled = $true
++            Write-DetectionLog -Message "Personal OneDrive Sync: DISABLED - prevents personal account sign-ins" -Level 'INFO'
++            $script:outputData.OneDrive_DisablePersonalSync = "YES"
++        }
++    }
++    
++    if (-not $personalSyncDisabled) {
++        Write-DetectionLog -Message "Personal OneDrive Sync NOT disabled - users can sign into personal accounts" -Level 'WARNING'
++        Write-DetectionLog -Message "This is a security risk - personal accounts should be blocked in enterprise" -Level 'WARNING'
++        $script:exitCode = 1
++    }
++    
++    # Determine final status based on all checks
++    $allChecksPass = $true
++    $failureReasons = @()
++    
++    if ($script:outputData.OneDrive_Installed -ne "YES") {
++        $allChecksPass = $false
++        $failureReasons += "OneDrive not installed"
++    }
++    if ($script:outputData.OneDrive_Running -ne "YES") {
++        $allChecksPass = $false
++        $failureReasons += "OneDrive not running"
++    }
++    if ($script:outputData.OneDrive_TenantConfigured -ne "YES") {
++        $allChecksPass = $false
++        $failureReasons += "Tenant ID not configured"
++    }
++    if ($script:outputData.OneDrive_FilesOnDemand -ne "YES") {
++        $allChecksPass = $false
++        $failureReasons += "Files On-Demand not enabled"
++    }
++    if ($script:outputData.OneDrive_KFMConfigured -ne "YES") {
++        $allChecksPass = $false
++        $failureReasons += "KFM not configured"
++    }
++    if ($script:outputData.OneDrive_AutoLogin -ne "YES") {
++        $allChecksPass = $false
++        $failureReasons += "Auto-login not configured"
++    }
++    if ($script:outputData.OneDrive_DisablePersonalSync -ne "YES") {
++        $allChecksPass = $false
++        $failureReasons += "Personal accounts not blocked"
++    }
++    # Storage Sense is optional but recommended
++    
++    if ($allChecksPass) {
++        $script:outputData.OneDrive_Status = "CONFIGURED"
++        $script:outputData.OneDrive_Reason = "All requirements met"
++        $script:exitCode = 0
++        
++        # Add summary explanation when everything is configured
++        Write-DetectionLog -Message "`n=== DISK SPACE OPTIMIZATION SUMMARY ===" -Level 'INFO'
++        Write-DetectionLog -Message "OneDrive Features:" -Level 'INFO'
++        Write-DetectionLog -Message "  * Files On-Demand: Files appear in Explorer but only download when needed" -Level 'INFO'
++        Write-DetectionLog -Message "  * KFM: Desktop, Documents, Pictures, Downloads backed up to cloud" -Level 'INFO'
++        Write-DetectionLog -Message "  * Auto-Login: Users automatically signed in with Windows credentials" -Level 'INFO'
++        Write-DetectionLog -Message "  * Personal Sync Disabled: Blocks personal OneDrive accounts for security" -Level 'INFO'
++        Write-DetectionLog -Message "`nWindows Features:" -Level 'INFO'
++        Write-DetectionLog -Message "  * Storage Sense: Automatically converts unused files to online-only after 30 days" -Level 'INFO'
++        Write-DetectionLog -Message "`nHow they work together:" -Level 'INFO'
++        Write-DetectionLog -Message "  1. OneDrive syncs your KFM folders to the cloud" -Level 'INFO'
++        Write-DetectionLog -Message "  2. Files On-Demand shows all files but doesn't download them" -Level 'INFO'
++        Write-DetectionLog -Message "  3. Storage Sense frees disk space by making old files online-only" -Level 'INFO'
++        Write-DetectionLog -Message "  4. Result: Full file access with minimal disk usage" -Level 'INFO'
++    } else {
++        $script:outputData.OneDrive_Status = "NOT_CONFIGURED"
++        $script:outputData.OneDrive_Reason = $failureReasons -join "; "
++        $script:exitCode = 1
++    }
++}
++catch {
++    Write-DetectionError -Message "Critical error during detection" -ErrorRecord $_
++    $script:outputData.OneDrive_Status = "ERROR"
++    $script:outputData.OneDrive_Reason = $_.Exception.Message
++    $script:exitCode = 1
++}
++
++# Output results
++Write-ConnectWiseOutput -Data $script:outputData
++
++# Log completion
++Write-DetectionLog -Message "Detection completed with exit code: $script:exitCode" -Level 'INFO'
++
++# Cleanup logging
++if ($script:LoggingEnabled) {
++    try {
++        Stop-UniversalTranscript -ErrorAction SilentlyContinue
++    }
++    catch {
++        # Ignore transcript errors
++    }
++}
++
++exit $script:exitCode
+\ No newline at end of file
+diff --git a/Scripts/Detect-OneDriveConfiguration-RMM.ps1 b/Scripts/Detect-OneDriveConfiguration-RMM.ps1
+index b2b066d..3f3b805 100644
+--- a/Scripts/Detect-OneDriveConfiguration-RMM.ps1
++++ b/Scripts/Detect-OneDriveConfiguration-RMM.ps1
+@@ -6,7 +6,10 @@ param(
+     [switch]$EnableDebug = $false,
+     
+     [Parameter(Mandatory = $false)]
+-    [switch]$ConfigurationOnly = $false
++    [switch]$ConfigurationOnly = $false,
++    
++    [Parameter(Mandatory = $false)]
++    [string]$ExpectedTenantId = ""
+ )
+ 
+ <#
+@@ -25,8 +28,13 @@ param(
+     When specified, returns success (0) if OneDrive is not installed.
+     Use this in environments where OneDrive deployment is handled separately.
+     
++.PARAMETER ExpectedTenantId
++    The tenant ID to check for in OneDrive configuration.
++    If not specified, script will only check if ANY tenant is configured.
++    Example: "336dbee2-bd39-4116-b305-3105539e416f"
++    
+ .NOTES
+-    Version: 1.1
++    Version: 1.2
+     Author: OneDrive RMM Detection
+     For production use, consider -ConfigurationOnly parameter
+ #>
+@@ -53,6 +61,7 @@ $script:outputData = @{
+     OneDrive_KFMConfigured = "NO"
+     OneDrive_StorageSense = "NO"
+     OneDrive_AutoLogin = "NO"
++    OneDrive_DisablePersonalSync = "NO"
+ }
+ 
+ #region Logging Module Configuration
+@@ -287,6 +296,7 @@ function Write-ConnectWiseOutput {
+         "OneDrive_KFMConfigured: $($Data.OneDrive_KFMConfigured)",
+         "OneDrive_StorageSense: $($Data.OneDrive_StorageSense)",
+         "OneDrive_AutoLogin: $($Data.OneDrive_AutoLogin)",
++        "OneDrive_DisablePersonalSync: $($Data.OneDrive_DisablePersonalSync)",
+         "OneDrive_CheckDate: $($Data.OneDrive_CheckDate)"
+     ) -join "`n"
+     
+@@ -399,8 +409,16 @@ try {
+     
+     if ($tenantId) {
+         Write-DetectionLog -Message "Tenant ID configured: $tenantId" -Level 'INFO'
+-        $script:outputData.OneDrive_TenantConfigured = "YES"
+-        # Don't set exit code to 1 if found in policy - it's configured, just pending application
++        
++        # If ExpectedTenantId is provided, verify it matches
++        if ($ExpectedTenantId -and $tenantId -ne $ExpectedTenantId) {
++            Write-DetectionLog -Message "Tenant ID mismatch! Expected: $ExpectedTenantId, Found: $tenantId" -Level 'ERROR'
++            $script:outputData.OneDrive_TenantConfigured = "WRONG"
++            $script:exitCode = 1
++        } else {
++            $script:outputData.OneDrive_TenantConfigured = "YES"
++            # Don't set exit code to 1 if found in policy - it's configured, just pending application
++        }
+     } else {
+         Write-DetectionLog -Message "Tenant ID not configured" -Level 'ERROR'
+         $script:exitCode = 1
+@@ -550,6 +568,25 @@ try {
+         $script:exitCode = 1
+     }
+     
++    # 8. Check Disable Personal Sync (Security setting)
++    Write-DetectionLog -Message "Checking personal OneDrive account blocking..." -Level 'INFO'
++    
++    $personalSyncDisabled = $false
++    if (Test-Path $policyPath) {
++        $disablePersonal = Get-ItemProperty -Path $policyPath -Name "DisablePersonalSync" -ErrorAction SilentlyContinue
++        if ($disablePersonal -and $disablePersonal.DisablePersonalSync -eq 1) {
++            $personalSyncDisabled = $true
++            Write-DetectionLog -Message "Personal OneDrive Sync: DISABLED - prevents personal account sign-ins" -Level 'INFO'
++            $script:outputData.OneDrive_DisablePersonalSync = "YES"
++        }
++    }
++    
++    if (-not $personalSyncDisabled) {
++        Write-DetectionLog -Message "Personal OneDrive Sync NOT disabled - users can sign into personal accounts" -Level 'WARNING'
++        Write-DetectionLog -Message "This is a security risk - personal accounts should be blocked in enterprise" -Level 'WARNING'
++        $script:exitCode = 1
++    }
++    
+     # Determine final status based on all checks
+     $allChecksPass = $true
+     $failureReasons = @()
+@@ -578,6 +615,10 @@ try {
+         $allChecksPass = $false
+         $failureReasons += "Auto-login not configured"
+     }
++    if ($script:outputData.OneDrive_DisablePersonalSync -ne "YES") {
++        $allChecksPass = $false
++        $failureReasons += "Personal accounts not blocked"
++    }
+     # Storage Sense is optional but recommended
+     
+     if ($allChecksPass) {
+@@ -591,6 +632,7 @@ try {
+         Write-DetectionLog -Message "  * Files On-Demand: Files appear in Explorer but only download when needed" -Level 'INFO'
+         Write-DetectionLog -Message "  * KFM: Desktop, Documents, Pictures, Downloads backed up to cloud" -Level 'INFO'
+         Write-DetectionLog -Message "  * Auto-Login: Users automatically signed in with Windows credentials" -Level 'INFO'
++        Write-DetectionLog -Message "  * Personal Sync Disabled: Blocks personal OneDrive accounts for security" -Level 'INFO'
+         Write-DetectionLog -Message "`nWindows Features:" -Level 'INFO'
+         Write-DetectionLog -Message "  * Storage Sense: Automatically converts unused files to online-only after 30 days" -Level 'INFO'
+         Write-DetectionLog -Message "`nHow they work together:" -Level 'INFO'
+diff --git a/Scripts/Get-AutoDetectedTenantID.ps1 b/Scripts/Get-AutoDetectedTenantID.ps1
+new file mode 100644
+index 0000000..20d12f0
+--- /dev/null
++++ b/Scripts/Get-AutoDetectedTenantID.ps1
+@@ -0,0 +1,99 @@
++#Requires -Version 5.1
++
++<#
++.SYNOPSIS
++    Auto-detects Azure AD Tenant ID from most reliable source
++.DESCRIPTION
++    Lightweight function for integration into other scripts.
++    Returns tenant ID or $null if not found.
++.EXAMPLE
++    $tenantId = & .\Get-AutoDetectedTenantID.ps1
++    if ($tenantId) {
++        Write-Host "Detected Tenant ID: $tenantId"
++    }
++#>
++
++function Get-AutoDetectedTenantID {
++    [CmdletBinding()]
++    param()
++    
++    # Method 1: Azure AD Join Status (Most Reliable)
++    try {
++        $dsregOutput = & dsregcmd /status 2>$null
++        if ($dsregOutput) {
++            $dsregText = $dsregOutput -join "`n"
++            if ($dsregText -match 'TenantId\s*:\s*([a-fA-F0-9\-]{36})') {
++                $tenantId = $matches[1]
++                if ($tenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                    Write-Verbose "Tenant ID found via dsregcmd: $tenantId"
++                    return $tenantId
++                }
++            }
++        }
++    }
++    catch {
++        Write-Verbose "dsregcmd failed: $_"
++    }
++    
++    # Method 2: OneDrive Registry (Current User)
++    try {
++        $regPath = "HKCU:\Software\Microsoft\OneDrive\Accounts\Business1"
++        if (Test-Path $regPath) {
++            $configuredTenantId = Get-ItemPropertyValue -Path $regPath -Name "ConfiguredTenantId" -ErrorAction SilentlyContinue
++            if ($configuredTenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                Write-Verbose "Tenant ID found in OneDrive registry: $configuredTenantId"
++                return $configuredTenantId
++            }
++        }
++    }
++    catch {
++        Write-Verbose "OneDrive registry check failed: $_"
++    }
++    
++    # Method 3: OneDrive Group Policy
++    try {
++        $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
++        if (Test-Path $policyPath) {
++            $kfmTenantId = Get-ItemPropertyValue -Path $policyPath -Name "KFMSilentOptIn" -ErrorAction SilentlyContinue
++            if ($kfmTenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                Write-Verbose "Tenant ID found in OneDrive policy: $kfmTenantId"
++                return $kfmTenantId
++            }
++        }
++    }
++    catch {
++        Write-Verbose "OneDrive policy check failed: $_"
++    }
++    
++    # Method 4: Office 365 Connected Accounts
++    try {
++        $officePaths = @(
++            "HKCU:\Software\Microsoft\Office\16.0\Common\Identity\ConnectedAccounts",
++            "HKCU:\Software\Microsoft\Office\15.0\Common\Identity\ConnectedAccounts"
++        )
++        
++        foreach ($path in $officePaths) {
++            if (Test-Path $path) {
++                $accounts = Get-ChildItem $path -ErrorAction SilentlyContinue
++                foreach ($account in $accounts) {
++                    $userTenantId = Get-ItemPropertyValue -Path $account.PSPath -Name "UserTenantId" -ErrorAction SilentlyContinue
++                    if ($userTenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                        Write-Verbose "Tenant ID found in Office 365: $userTenantId"
++                        return $userTenantId
++                    }
++                }
++            }
++        }
++    }
++    catch {
++        Write-Verbose "Office 365 check failed: $_"
++    }
++    
++    Write-Verbose "No tenant ID found through auto-detection"
++    return $null
++}
++
++# If script is run directly, execute the function
++if ($MyInvocation.InvocationName -ne '.') {
++    Get-AutoDetectedTenantID -Verbose:$VerbosePreference
++}
+\ No newline at end of file
+diff --git a/Scripts/Get-TenantID-Enhanced.ps1 b/Scripts/Get-TenantID-Enhanced.ps1
+new file mode 100644
+index 0000000..7b24517
+--- /dev/null
++++ b/Scripts/Get-TenantID-Enhanced.ps1
+@@ -0,0 +1,336 @@
++#Requires -Version 5.1
++
++<#
++.SYNOPSIS
++    Enhanced Tenant ID Detection with Multiple Methods
++.DESCRIPTION
++    Detects tenant ID from multiple sources with reliability scoring:
++    - Azure AD/Entra ID join status (most reliable)
++    - OneDrive registry configuration
++    - Office 365 configuration
++    - Domain controller queries
++    Returns the most reliable tenant ID found
++.PARAMETER EnableDebug
++    Shows detailed debug information
++.PARAMETER TestAllMethods
++    Tests all detection methods even after finding a tenant ID
++#>
++
++[CmdletBinding()]
++param(
++    [switch]$EnableDebug,
++    [switch]$TestAllMethods
++)
++
++# Initialize results
++$results = @{
++    TenantID = $null
++    Source = "Not found"
++    Reliability = 0  # 0-100 score
++    AllFindings = @()
++    Errors = @()
++}
++
++function Write-DebugInfo {
++    param($Message, $Level = "INFO")
++    
++    $color = switch ($Level) {
++        "ERROR" { "Red" }
++        "WARNING" { "Yellow" }
++        "SUCCESS" { "Green" }
++        "DEBUG" { "Gray" }
++        default { "White" }
++    }
++    
++    if ($EnableDebug -or $Level -in @("ERROR", "WARNING", "SUCCESS")) {
++        Write-Host "[$Level] $Message" -ForegroundColor $color
++    }
++}
++
++function Test-TenantID {
++    param($TenantID)
++    # Validate GUID format
++    return $TenantID -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$'
++}
++
++Write-Host "=== Enhanced Tenant ID Detection ===" -ForegroundColor Cyan
++Write-DebugInfo "Starting comprehensive tenant ID detection" "INFO"
++
++# Method 1: Azure AD / Entra ID Join Status (Most Reliable - Score: 100)
++Write-DebugInfo "Method 1: Checking Azure AD/Entra ID join status..." "INFO"
++try {
++    $dsregOutput = & dsregcmd /status 2>$null
++    if ($dsregOutput) {
++        # Parse dsregcmd output
++        $dsregText = $dsregOutput -join "`n"
++        
++        # Check Azure AD Join section
++        if ($dsregText -match 'AzureAdJoined\s*:\s*YES') {
++            Write-DebugInfo "Device is Azure AD joined" "SUCCESS"
++            if ($dsregText -match 'TenantId\s*:\s*([a-fA-F0-9\-]{36})') {
++                $tenantId = $matches[1]
++                if (Test-TenantID $tenantId) {
++                    $results.AllFindings += @{
++                        Method = "Azure AD Join"
++                        TenantID = $tenantId
++                        Reliability = 100
++                        Details = "Device is Azure AD joined"
++                    }
++                    if ($results.Reliability -lt 100) {
++                        $results.TenantID = $tenantId
++                        $results.Source = "Azure AD Join (dsregcmd)"
++                        $results.Reliability = 100
++                    }
++                    Write-DebugInfo "Found Tenant ID from Azure AD join: $tenantId" "SUCCESS"
++                }
++            }
++        }
++        
++        # Check Workplace Join section (Azure AD Registered)
++        elseif ($dsregText -match 'WorkplaceJoined\s*:\s*YES') {
++            Write-DebugInfo "Device is Azure AD registered (not joined)" "INFO"
++            if ($dsregText -match 'TenantId\s*:\s*([a-fA-F0-9\-]{36})') {
++                $tenantId = $matches[1]
++                if (Test-TenantID $tenantId) {
++                    $results.AllFindings += @{
++                        Method = "Azure AD Registered"
++                        TenantID = $tenantId
++                        Reliability = 95
++                        Details = "Device is Azure AD registered"
++                    }
++                    if ($results.Reliability -lt 95) {
++                        $results.TenantID = $tenantId
++                        $results.Source = "Azure AD Registered (dsregcmd)"
++                        $results.Reliability = 95
++                    }
++                    Write-DebugInfo "Found Tenant ID from Azure AD registration: $tenantId" "SUCCESS"
++                }
++            }
++        }
++        else {
++            Write-DebugInfo "Device is not Azure AD joined or registered" "INFO"
++        }
++    }
++}
++catch {
++    $results.Errors += "dsregcmd error: $_"
++    Write-DebugInfo "Error running dsregcmd: $_" "ERROR"
++}
++
++# Method 2: Certificate Store (Score: 90)
++if (!$results.TenantID -or $TestAllMethods) {
++    Write-DebugInfo "Method 2: Checking certificate store..." "INFO"
++    try {
++        $certs = Get-ChildItem Cert:\CurrentUser\My -ErrorAction SilentlyContinue
++        foreach ($cert in $certs) {
++            if ($cert.Subject -match 'CN=([a-fA-F0-9\-]{36})' -or $cert.Issuer -match 'DC=([a-fA-F0-9\-]{36})') {
++                $possibleTenantId = $matches[1]
++                if (Test-TenantID $possibleTenantId) {
++                    $results.AllFindings += @{
++                        Method = "Certificate Store"
++                        TenantID = $possibleTenantId
++                        Reliability = 90
++                        Details = "From certificate: $($cert.Subject)"
++                    }
++                    if ($results.Reliability -lt 90) {
++                        $results.TenantID = $possibleTenantId
++                        $results.Source = "Certificate Store"
++                        $results.Reliability = 90
++                    }
++                    Write-DebugInfo "Found possible Tenant ID in certificate: $possibleTenantId" "INFO"
++                }
++            }
++        }
++    }
++    catch {
++        $results.Errors += "Certificate store error: $_"
++        Write-DebugInfo "Error checking certificates: $_" "WARNING"
++    }
++}
++
++# Method 3: OneDrive Registry Configuration (Score: 85)
++if (!$results.TenantID -or $TestAllMethods) {
++    Write-DebugInfo "Method 3: Checking OneDrive registry configuration..." "INFO"
++    
++    # Check HKCU for current user
++    $userRegPath = "HKCU:\Software\Microsoft\OneDrive\Accounts\Business1"
++    if (Test-Path $userRegPath) {
++        try {
++            $regKeys = Get-ItemProperty -Path $userRegPath -ErrorAction SilentlyContinue
++            if ($regKeys.ConfiguredTenantId -and (Test-TenantID $regKeys.ConfiguredTenantId)) {
++                $results.AllFindings += @{
++                    Method = "OneDrive User Registry"
++                    TenantID = $regKeys.ConfiguredTenantId
++                    Reliability = 85
++                    Details = "ConfiguredTenantId in HKCU"
++                }
++                if ($results.Reliability -lt 85) {
++                    $results.TenantID = $regKeys.ConfiguredTenantId
++                    $results.Source = "OneDrive Registry (HKCU)"
++                    $results.Reliability = 85
++                }
++                Write-DebugInfo "Found Tenant ID in OneDrive registry: $($regKeys.ConfiguredTenantId)" "SUCCESS"
++            }
++        }
++        catch {
++            $results.Errors += "OneDrive registry error: $_"
++        }
++    }
++    
++    # Check HKLM policies
++    $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
++    if (Test-Path $policyPath) {
++        try {
++            $policyKeys = Get-ItemProperty -Path $policyPath -ErrorAction SilentlyContinue
++            if ($policyKeys.KFMSilentOptIn -and (Test-TenantID $policyKeys.KFMSilentOptIn)) {
++                $results.AllFindings += @{
++                    Method = "OneDrive Group Policy"
++                    TenantID = $policyKeys.KFMSilentOptIn
++                    Reliability = 80
++                    Details = "KFMSilentOptIn in HKLM"
++                }
++                if ($results.Reliability -lt 80) {
++                    $results.TenantID = $policyKeys.KFMSilentOptIn
++                    $results.Source = "OneDrive Policy (HKLM)"
++                    $results.Reliability = 80
++                }
++                Write-DebugInfo "Found Tenant ID in OneDrive policy: $($policyKeys.KFMSilentOptIn)" "SUCCESS"
++            }
++        }
++        catch {
++            $results.Errors += "OneDrive policy error: $_"
++        }
++    }
++}
++
++# Method 4: Office 365 Configuration (Score: 75)
++if (!$results.TenantID -or $TestAllMethods) {
++    Write-DebugInfo "Method 4: Checking Office 365 configuration..." "INFO"
++    
++    # Check Office identity
++    $officeIdentityPaths = @(
++        "HKCU:\Software\Microsoft\Office\16.0\Common\Identity",
++        "HKCU:\Software\Microsoft\Office\15.0\Common\Identity"
++    )
++    
++    foreach ($path in $officeIdentityPaths) {
++        if (Test-Path $path) {
++            try {
++                $identityKeys = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue
++                # Look for ADUserName which might contain tenant info
++                if ($identityKeys.ADUserName -match '@(.+)\.onmicrosoft\.com') {
++                    Write-DebugInfo "Found Office 365 identity: $($identityKeys.ADUserName)" "INFO"
++                }
++                
++                # Check connected accounts
++                $connectedPath = Join-Path $path "ConnectedAccounts"
++                if (Test-Path $connectedPath) {
++                    $accounts = Get-ChildItem $connectedPath
++                    foreach ($account in $accounts) {
++                        $accountProps = Get-ItemProperty -Path $account.PSPath -ErrorAction SilentlyContinue
++                        if ($accountProps.UserTenantId -and (Test-TenantID $accountProps.UserTenantId)) {
++                            $results.AllFindings += @{
++                                Method = "Office 365 Connected Account"
++                                TenantID = $accountProps.UserTenantId
++                                Reliability = 75
++                                Details = "From account: $($accountProps.UserPrincipalName)"
++                            }
++                            if ($results.Reliability -lt 75) {
++                                $results.TenantID = $accountProps.UserTenantId
++                                $results.Source = "Office 365 Configuration"
++                                $results.Reliability = 75
++                            }
++                            Write-DebugInfo "Found Tenant ID in Office config: $($accountProps.UserTenantId)" "SUCCESS"
++                        }
++                    }
++                }
++            }
++            catch {
++                $results.Errors += "Office configuration error: $_"
++            }
++        }
++    }
++}
++
++# Method 5: WMI/CIM Azure AD Info (Score: 70)
++if (!$results.TenantID -or $TestAllMethods) {
++    Write-DebugInfo "Method 5: Checking WMI for Azure AD info..." "INFO"
++    try {
++        # Check MDM enrollment
++        $mdmEnrollment = Get-CimInstance -Namespace "root/cimv2/mdm/dmmap" -ClassName "MDM_EnrollmentStatusTracking_Setup01" -ErrorAction SilentlyContinue
++        if ($mdmEnrollment) {
++            Write-DebugInfo "Found MDM enrollment information" "INFO"
++        }
++    }
++    catch {
++        Write-DebugInfo "No MDM enrollment found or access denied" "DEBUG"
++    }
++}
++
++# Method 6: Event Log Analysis (Score: 65)
++if (!$results.TenantID -or $TestAllMethods) {
++    Write-DebugInfo "Method 6: Checking event logs for Azure AD activity..." "INFO"
++    try {
++        $aadEvents = Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-AAD/Operational'; ID=1098} -MaxEvents 10 -ErrorAction SilentlyContinue
++        foreach ($event in $aadEvents) {
++            if ($event.Message -match 'TenantId:\s*([a-fA-F0-9\-]{36})') {
++                $tenantId = $matches[1]
++                if (Test-TenantID $tenantId) {
++                    $results.AllFindings += @{
++                        Method = "AAD Event Log"
++                        TenantID = $tenantId
++                        Reliability = 65
++                        Details = "From AAD operational log"
++                    }
++                    if ($results.Reliability -lt 65) {
++                        $results.TenantID = $tenantId
++                        $results.Source = "AAD Event Log"
++                        $results.Reliability = 65
++                    }
++                    Write-DebugInfo "Found Tenant ID in event log: $tenantId" "INFO"
++                    break
++                }
++            }
++        }
++    }
++    catch {
++        Write-DebugInfo "Could not access AAD event logs" "DEBUG"
++    }
++}
++
++# Display Results
++Write-Host "`n" + ("=" * 70) -ForegroundColor Cyan
++Write-Host "TENANT ID DETECTION RESULTS" -ForegroundColor Cyan
++Write-Host ("=" * 70) -ForegroundColor Cyan
++
++if ($results.TenantID) {
++    Write-Host "`nBEST MATCH FOUND:" -ForegroundColor Green
++    Write-Host "  Tenant ID: $($results.TenantID)" -ForegroundColor Green
++    Write-Host "  Source: $($results.Source)" -ForegroundColor Yellow
++    Write-Host "  Reliability: $($results.Reliability)%" -ForegroundColor Yellow
++} else {
++    Write-Host "`nNO TENANT ID FOUND" -ForegroundColor Red
++    Write-Host "This device may not be connected to any Azure AD tenant." -ForegroundColor Yellow
++}
++
++if ($TestAllMethods -and $results.AllFindings.Count -gt 0) {
++    Write-Host "`nALL FINDINGS:" -ForegroundColor Cyan
++    $results.AllFindings | Sort-Object -Property Reliability -Descending | ForEach-Object {
++        Write-Host "`n  Method: $($_.Method)" -ForegroundColor White
++        Write-Host "  Tenant ID: $($_.TenantID)" -ForegroundColor Gray
++        Write-Host "  Reliability: $($_.Reliability)%" -ForegroundColor Gray
++        Write-Host "  Details: $($_.Details)" -ForegroundColor Gray
++    }
++}
++
++if ($results.Errors.Count -gt 0 -and $EnableDebug) {
++    Write-Host "`nERRORS ENCOUNTERED:" -ForegroundColor Red
++    $results.Errors | ForEach-Object {
++        Write-Host "  - $_" -ForegroundColor Red
++    }
++}
++
++Write-Host "`n" + ("=" * 70) -ForegroundColor Cyan
++
++# Return the most reliable tenant ID found
++return $results
+\ No newline at end of file
+diff --git a/Scripts/README-RMM.md b/Scripts/README-RMM.md
+index a64d1e0..c473dbb 100644
+--- a/Scripts/README-RMM.md
++++ b/Scripts/README-RMM.md
+@@ -8,6 +8,7 @@ These scripts configure OneDrive for optimal disk space usage in preparation for
+ ### 1. Detect-OneDriveConfiguration-RMM.ps1
+ - **Purpose**: Detects current OneDrive configuration state
+ - **Parameters**:
++  - `-ExpectedTenantId`: Optional tenant ID to verify (e.g., "336dbee2-bd39-4116-b305-3105539e416f")
+   - `-ConfigurationOnly`: Returns success if OneDrive not installed (nothing to configure)
+   - `-EnableDebug`: Enable verbose logging for troubleshooting
+ - **Exit Codes**: 
+@@ -16,21 +17,36 @@ These scripts configure OneDrive for optimal disk space usage in preparation for
+ - **Checks**:
+   - OneDrive installation
+   - OneDrive running state
+-  - Tenant ID configuration
++  - Tenant ID configuration (optional verification)
+   - Files On-Demand enabled
+   - Known Folder Move (KFM) for all 4 folders
++  - Storage Sense configuration
++  - Auto-login (SilentAccountConfig)
++  - Personal account blocking (DisablePersonalSync)
+ 
+ ### 2. Remediate-OneDriveConfiguration-RMM.ps1
+ - **Purpose**: Applies OneDrive configuration for disk space optimization
+ - **Parameters**:
++  - `-TenantId`: Your organization's Azure AD tenant ID (optional - auto-detects by default)
++  - `-SkipAutoDetection`: Disables auto-detection, requires explicit TenantId
++  - `-StorageSenseDays`: Days before converting files to online-only (default: 30)
+   - `-ConfigurationOnly`: Skip OneDrive installation, only configure existing
+   - `-EnableDebug`: Enable verbose logging for troubleshooting
++- **Auto-Detection** (Default Behavior):
++  - Automatically detects tenant ID from device configuration
++  - Detection methods (in order of reliability):
++    1. Azure AD/Entra ID join status via `dsregcmd`
++    2. OneDrive registry configuration (HKCU)
++    3. OneDrive Group Policy (HKLM)
+ - **Actions**:
+   - Installs OneDrive if missing (unless -ConfigurationOnly)
+-  - Configures tenant ID: 336dbee2-bd39-4116-b305-3105539e416f
++  - Configures your specified tenant ID
+   - Enables Files On-Demand
+   - Configures KFM for Desktop, Documents, Pictures, Downloads
++  - Enables Storage Sense for automatic disk space management
+   - Excludes PST/OST files from sync
++  - Enables auto-login with Windows credentials
++  - Blocks personal OneDrive accounts
+   - Starts OneDrive if not running
+ 
+ ## RMM Deployment
+@@ -43,8 +59,14 @@ For production environments where OneDrive is pre-installed with Windows:
+ # Detection - configuration only mode
+ powershell.exe -ExecutionPolicy Bypass -File Detect-OneDriveConfiguration-RMM.ps1 -ConfigurationOnly
+ 
+-# Remediation - configuration only, no download/install
++# Detection - with tenant verification
++powershell.exe -ExecutionPolicy Bypass -File Detect-OneDriveConfiguration-RMM.ps1 -ConfigurationOnly -ExpectedTenantId "YOUR-TENANT-ID-HERE"
++
++# Remediation - auto-detection (default)
+ powershell.exe -ExecutionPolicy Bypass -File Remediate-OneDriveConfiguration-RMM.ps1 -ConfigurationOnly
++
++# Remediation - with explicit tenant ID (skip auto-detection)
++powershell.exe -ExecutionPolicy Bypass -File Remediate-OneDriveConfiguration-RMM.ps1 -TenantId "YOUR-TENANT-ID-HERE" -ConfigurationOnly -SkipAutoDetection
+ ```
+ 
+ In ConfigurationOnly mode:
+@@ -89,12 +111,37 @@ In ConfigurationOnly mode:
+ 
+ ## Configuration Details
+ 
+-- **Tenant ID**: 336dbee2-bd39-4116-b305-3105539e416f
++- **Tenant ID**: Must be provided as parameter (e.g., "336dbee2-bd39-4116-b305-3105539e416f")
+ - **Registry Path**: HKLM:\SOFTWARE\Policies\Microsoft\OneDrive
+ - **Key Settings**:
+   - FilesOnDemandEnabled = 1
+-  - KFMSilentOptIn = [TenantID]
++  - KFMSilentOptIn = [Your-TenantID]
+   - KFMSilentOptInDesktop = 1
+   - KFMSilentOptInDocuments = 1
+   - KFMSilentOptInPictures = 1
+-  - KFMSilentOptInDownloads = 1
+\ No newline at end of file
++  - KFMSilentOptInDownloads = 1 (if OneDrive version 23.002+)
++  - SilentAccountConfig = 1
++  - DisablePersonalSync = 1
++  
++## Finding Your Tenant ID
++
++1. **Azure AD Portal**: 
++   - Go to portal.azure.com
++   - Navigate to Azure Active Directory
++   - Find "Tenant ID" in the Overview section
++
++2. **Microsoft 365 Admin Center**:
++   - Go to admin.microsoft.com
++   - Settings ΓåÆ Org settings ΓåÆ Organization profile
++   - Look for "Tenant ID"
++
++3. **PowerShell** (on a domain-joined machine):
++   ```powershell
++   (Get-AzureADTenantDetail).ObjectId
++   ```
++
++4. **Auto-Detection Script**:
++   ```powershell
++   # Test auto-detection capabilities
++   .\Get-TenantID-Enhanced.ps1 -EnableDebug -TestAllMethods
++   ```
+\ No newline at end of file
+diff --git a/Scripts/Remediate-OneDriveConfiguration-RMM-Production.ps1 b/Scripts/Remediate-OneDriveConfiguration-RMM-Production.ps1
+new file mode 100644
+index 0000000..65ce5c6
+--- /dev/null
++++ b/Scripts/Remediate-OneDriveConfiguration-RMM-Production.ps1
+@@ -0,0 +1,637 @@
++#Requires -Version 5.1
++
++<#
++.SYNOPSIS
++    Remediates OneDrive configuration for disk space optimization with Storage Sense
++.DESCRIPTION
++    Enhanced RMM-compatible remediation script that:
++    - Configures OneDrive (Files On-Demand, KFM, etc.)
++    - Enables and configures Windows Storage Sense for automatic space management
++    - Sets up automatic conversion of unused files to online-only
++    - Optionally installs OneDrive if missing (default behavior)
++    - Can run in ConfigurationOnly mode to skip installation
++.PARAMETER TenantId
++    Your organization's Azure AD Tenant ID (optional)
++    Example: "336dbee2-bd39-4116-b305-3105539e416f"
++    If not provided, script will auto-detect from device configuration
++    Auto-detection sources: Azure AD join, OneDrive registry, Group Policy
++.PARAMETER ConfigurationOnly
++    When specified, skips OneDrive installation and only configures existing OneDrive.
++    Use this when OneDrive deployment is handled separately.
++.PARAMETER StorageSenseDays
++    Number of days before unused files are converted to online-only (default: 30)
++.PARAMETER SkipAutoDetection
++    Disables auto-detection and requires explicit TenantId parameter
++    Use this if you want to ensure a specific tenant ID is used
++.NOTES
++    Designed to run from SYSTEM context via RMM
++    Storage Sense automates Files On-Demand to free disk space
++    For production RMM deployment, consider using -ConfigurationOnly
++#>
++
++param(
++    [Parameter(Mandatory = $false, HelpMessage = "Your Azure AD Tenant ID (e.g., 336dbee2-bd39-4116-b305-3105539e416f)")]
++    [ValidatePattern('^$|^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$')]
++    [string]$TenantId = "",
++    
++    [string]$LogPath = "$env:TEMP\OneDrive-Remediation-$(Get-Date -Format 'yyyyMMdd-HHmmss').log",
++    [string]$DetectionResultsPath = "$env:TEMP\OneDrive-Detection-Results.json",
++    [int]$StorageSenseDays = 30,  # Days before converting files to online-only
++    [switch]$EnableDebug = $false,  # Enable console output for testing
++    [switch]$ConfigurationOnly = $false,  # Skip OneDrive installation, only configure existing
++    [switch]$SkipAutoDetection = $false  # Skip auto-detection and require explicit TenantId
++)
++
++# Initialize
++$VerbosePreference = 'SilentlyContinue'
++$script:exitCode = 0
++$script:remediationSuccess = $true
++$script:supportsDownloadsKFM = $false
++
++#region Logging Module Configuration
++# Import logging module - use local copy only
++$LoggingModulePath = Join-Path $PSScriptRoot "logging\logging.psm1"
++$script:LoggingEnabled = $false
++$script:LoggingMode = if ($EnableDebug) { 'EnableDebug' } else { 'SilentMode' }
++
++if (Test-Path $LoggingModulePath) {
++    try {
++        if ($EnableDebug) {
++            Write-Host "[DEBUG] Found logging module at: $LoggingModulePath" -ForegroundColor Cyan
++        }
++        
++        Import-Module $LoggingModulePath -Force -WarningAction SilentlyContinue
++        $script:LoggingEnabled = $true
++        
++        if ($EnableDebug) {
++            Write-Host "[DEBUG] Logging module imported successfully" -ForegroundColor Cyan
++            Write-Host "[DEBUG] LoggingMode: $script:LoggingMode" -ForegroundColor Cyan
++        }
++        
++        # Initialize logging
++        Initialize-Logging -BaseLogPath "C:\ProgramData\OneDriveRemediation\Logs" `
++                          -JobName "OneDriveRemediation" `
++                          -ParentScriptName "Remediate-OneDriveConfiguration-RMM"
++        
++        # Set global EnableDebug for logging module
++        $global:EnableDebug = $EnableDebug
++        
++        if ($EnableDebug) {
++            Write-Host "[DEBUG] Logging initialized. Global EnableDebug = $($global:EnableDebug)" -ForegroundColor Cyan
++        }
++        
++        Write-AppDeploymentLog -Message "OneDrive Remediation Script Started" -Level "INFO" -Mode $script:LoggingMode
++        Write-AppDeploymentLog -Message "Computer: $env:COMPUTERNAME" -Level "INFO" -Mode $script:LoggingMode
++        Write-AppDeploymentLog -Message "Running as: $env:USERNAME" -Level "INFO" -Mode $script:LoggingMode
++        Write-AppDeploymentLog -Message "Tenant ID: $TenantId" -Level "INFO" -Mode $script:LoggingMode
++        Write-AppDeploymentLog -Message "Storage Sense Days: $StorageSenseDays" -Level "INFO" -Mode $script:LoggingMode
++    }
++    catch {
++        $script:LoggingEnabled = $false
++        if ($EnableDebug) {
++            Write-Host "[DEBUG ERROR] Logging initialization failed: $_" -ForegroundColor Red
++            Write-Host "[DEBUG ERROR] Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
++        }
++    }
++}
++else {
++    if ($EnableDebug) {
++        Write-Host "[DEBUG WARNING] Logging module not found at: $LoggingModulePath" -ForegroundColor Yellow
++    }
++}
++#endregion
++
++# Logging function wrapper
++function Write-RemediationLog {
++    param(
++        [string]$Message, 
++        [string]$Level = "INFO"
++    )
++    
++    if ($script:LoggingEnabled) {
++        try {
++            # Force EnableDebug mode if global debug is set
++            $actualMode = if ($global:EnableDebug) { 'EnableDebug' } else { $script:LoggingMode }
++            Write-AppDeploymentLog -Message $Message -Level $Level -Mode $actualMode
++        }
++        catch {
++            # Logging failed, fall back to simple logging
++        }
++    }
++    else {
++        # Fallback logging if module not available
++        $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
++        $logMessage = "$timestamp [$Level] $Message"
++        Add-Content -Path $LogPath -Value $logMessage -Force -ErrorAction SilentlyContinue
++        
++        # Only write to console if debug is enabled or it's an error
++        if ($EnableDebug -or $Level -eq "ERROR") {
++            $color = switch ($Level) {
++                "ERROR" { "Red" }
++                "WARNING" { "Yellow" }
++                "SUCCESS" { "Green" }
++                "INFO" { "White" }
++                "DEBUG" { "Gray" }
++                default { "White" }
++            }
++            Write-Host $Message -ForegroundColor $color
++        }
++    }
++}
++
++# Function to configure Storage Sense
++function Configure-StorageSense {
++    param([int]$DaysUntilOnlineOnly = 30)
++    
++    Write-RemediationLog "Configuring Windows Storage Sense..."
++    
++    try {
++        # Storage Sense registry path
++        $storagePolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\StorageSense"
++        
++        # Create policy key if it doesn't exist
++        if (!(Test-Path $storagePolicyPath)) {
++            New-Item -Path $storagePolicyPath -Force | Out-Null
++            Write-RemediationLog "Created Storage Sense policy registry key"
++        }
++        
++        # Enable Storage Sense
++        Set-ItemProperty -Path $storagePolicyPath -Name "AllowStorageSenseGlobal" -Value 1 -Type DWord
++        Write-RemediationLog "Enabled Storage Sense globally"
++        
++        # Configure Storage Sense to run automatically
++        Set-ItemProperty -Path $storagePolicyPath -Name "ConfigStorageSenseGlobalCadence" -Value 7 -Type DWord  # Weekly
++        Write-RemediationLog "Set Storage Sense to run weekly"
++        
++        # Configure cloud content dehydration
++        Set-ItemProperty -Path $storagePolicyPath -Name "ConfigStorageSenseCloudContentDehydrationThreshold" -Value $DaysUntilOnlineOnly -Type DWord
++        Write-RemediationLog "Set Files On-Demand conversion threshold to $DaysUntilOnlineOnly days"
++        
++        # Additional Storage Sense settings for disk cleanup
++        Set-ItemProperty -Path $storagePolicyPath -Name "ConfigStorageSenseRecycleBinCleanupThreshold" -Value 30 -Type DWord
++        Set-ItemProperty -Path $storagePolicyPath -Name "ConfigStorageSenseDownloadsCleanupThreshold" -Value 0 -Type DWord  # Never delete downloads
++        
++        # Also configure user-level Storage Sense settings if possible
++        $userStoragePath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy"
++        if (Test-Path "HKCU:\") {
++            if (!(Test-Path $userStoragePath)) {
++                New-Item -Path $userStoragePath -Force | Out-Null
++            }
++            
++            # Enable Storage Sense for user
++            Set-ItemProperty -Path $userStoragePath -Name "01" -Value 1 -Type DWord -ErrorAction SilentlyContinue
++            
++            # Set cloud content settings
++            Set-ItemProperty -Path $userStoragePath -Name "04" -Value 1 -Type DWord -ErrorAction SilentlyContinue  # Enable cloud content cleanup
++            Set-ItemProperty -Path $userStoragePath -Name "08" -Value $DaysUntilOnlineOnly -Type DWord -ErrorAction SilentlyContinue
++            Set-ItemProperty -Path $userStoragePath -Name "32" -Value 7 -Type DWord -ErrorAction SilentlyContinue  # Run weekly
++            
++            Write-RemediationLog "Configured user-level Storage Sense settings"
++        }
++        
++        Write-RemediationLog "Storage Sense configuration completed" "SUCCESS"
++        return $true
++    }
++    catch {
++        Write-RemediationLog "Failed to configure Storage Sense: $_" "ERROR"
++        return $false
++    }
++}
++
++# Auto-detect Tenant ID if not provided (default behavior)
++if (-not $TenantId -and -not $SkipAutoDetection) {
++    Write-RemediationLog "No Tenant ID provided, attempting auto-detection..." "INFO"
++    
++    # Inline auto-detection function
++    function Get-AutoDetectedTenantID {
++        # Method 1: Azure AD Join Status (Most Reliable for unconfigured machines)
++        try {
++            $dsregOutput = & dsregcmd /status 2>$null
++            if ($dsregOutput) {
++                $dsregText = $dsregOutput -join "`n"
++                if ($dsregText -match 'TenantId\s*:\s*([a-fA-F0-9\-]{36})') {
++                    $tenantId = $matches[1]
++                    if ($tenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                        Write-RemediationLog "Tenant ID found via dsregcmd (Azure AD): $tenantId" "SUCCESS"
++                        return $tenantId
++                    }
++                }
++            }
++        }
++        catch {
++            Write-RemediationLog "dsregcmd check failed: $_" "DEBUG"
++        }
++        
++        # Method 2: Check existing user OneDrive configurations (for non-Azure AD joined)
++        # Since we're running as SYSTEM, check all user profiles
++        try {
++            $userProfiles = Get-ChildItem "C:\Users" -Directory -ErrorAction SilentlyContinue | 
++                Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
++            
++            foreach ($profile in $userProfiles) {
++                # Try to get SID for the user
++                try {
++                    $sid = $null
++                    # First try with domain prefix
++                    try {
++                        $sid = (New-Object System.Security.Principal.NTAccount("$env:COMPUTERNAME\$($profile.Name)")).Translate([System.Security.Principal.SecurityIdentifier]).Value
++                    }
++                    catch {
++                        # Try without domain prefix
++                        $sid = (New-Object System.Security.Principal.NTAccount($profile.Name)).Translate([System.Security.Principal.SecurityIdentifier]).Value
++                    }
++                    
++                    if ($sid) {
++                        $userRegPath = "Registry::HKEY_USERS\$sid\Software\Microsoft\OneDrive\Accounts\Business1"
++                        
++                        if (Test-Path $userRegPath) {
++                            $configuredTenantId = Get-ItemPropertyValue -Path $userRegPath -Name "ConfiguredTenantId" -ErrorAction SilentlyContinue
++                            if ($configuredTenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                                Write-RemediationLog "Tenant ID found in user profile ($($profile.Name)): $configuredTenantId" "SUCCESS"
++                                return $configuredTenantId
++                            }
++                        }
++                    }
++                }
++                catch {
++                    Write-RemediationLog "Could not check profile $($profile.Name): $_" "DEBUG"
++                }
++            }
++            
++            # If running as user (not SYSTEM), also check HKCU
++            if ($env:USERNAME -ne 'SYSTEM') {
++                $regPath = "HKCU:\Software\Microsoft\OneDrive\Accounts\Business1"
++                if (Test-Path $regPath) {
++                    $configuredTenantId = Get-ItemPropertyValue -Path $regPath -Name "ConfiguredTenantId" -ErrorAction SilentlyContinue
++                    if ($configuredTenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                        Write-RemediationLog "Tenant ID found in current user registry: $configuredTenantId" "SUCCESS"
++                        return $configuredTenantId
++                    }
++                }
++            }
++        }
++        catch {
++            Write-RemediationLog "User profile registry check failed: $_" "DEBUG"
++        }
++        
++        # Method 3: Check Office 365 identity (if Office is installed)
++        try {
++            $officePaths = @(
++                "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration",
++                "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Office\ClickToRun\Configuration"
++            )
++            
++            foreach ($path in $officePaths) {
++                if (Test-Path $path) {
++                    $o365Config = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue
++                    if ($o365Config.TenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                        Write-RemediationLog "Tenant ID found in Office 365 configuration: $($o365Config.TenantId)" "SUCCESS"
++                        return $o365Config.TenantId
++                    }
++                }
++            }
++        }
++        catch {
++            Write-RemediationLog "Office 365 configuration check failed: $_" "DEBUG"
++        }
++        
++        # Method 4: OneDrive Group Policy (LAST - might be from our own configuration)
++        try {
++            $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
++            if (Test-Path $policyPath) {
++                $kfmTenantId = Get-ItemPropertyValue -Path $policyPath -Name "KFMSilentOptIn" -ErrorAction SilentlyContinue
++                if ($kfmTenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                    Write-RemediationLog "Tenant ID found in OneDrive policy (might be from previous run): $kfmTenantId" "WARNING"
++                    return $kfmTenantId
++                }
++            }
++        }
++        catch {
++            Write-RemediationLog "OneDrive policy check failed: $_" "DEBUG"
++        }
++        
++        return $null
++    }
++        
++    $detectedTenantId = Get-AutoDetectedTenantID
++    if ($detectedTenantId) {
++        $TenantId = $detectedTenantId
++        Write-RemediationLog "Auto-detected Tenant ID: $TenantId" "SUCCESS"
++    }
++    else {
++        Write-RemediationLog "Failed to auto-detect Tenant ID" "ERROR"
++        Write-RemediationLog "Please provide Tenant ID using -TenantId parameter" "ERROR"
++        Write-RemediationLog "Find your Tenant ID in Azure AD portal or use: (Get-AzureADTenantDetail).ObjectId" "INFO"
++        $script:exitCode = 1
++        exit $script:exitCode
++    }
++}
++elseif (-not $TenantId -and $SkipAutoDetection) {
++    Write-RemediationLog "No Tenant ID provided and auto-detection is disabled" "ERROR"
++    Write-RemediationLog "Please provide -TenantId parameter" "ERROR"
++    Write-RemediationLog "Example: .\$($MyInvocation.MyCommand.Name) -TenantId 'your-tenant-id'" "INFO"
++    $script:exitCode = 1
++    exit $script:exitCode
++}
++
++# These are already logged by the logging module initialization above
++if (-not $script:LoggingEnabled) {
++    Write-RemediationLog "Starting OneDrive configuration remediation with Storage Sense"
++    Write-RemediationLog "Running as: $env:USERNAME"
++    Write-RemediationLog "Tenant ID: $TenantId"
++    Write-RemediationLog "Storage Sense Days: $StorageSenseDays"
++}
++
++try {
++    # Load detection results if available
++    $detectionResults = @{}
++    if (Test-Path $DetectionResultsPath) {
++        Write-RemediationLog "Loading detection results from: $DetectionResultsPath"
++        $detectionResults = Get-Content -Path $DetectionResultsPath -Raw | ConvertFrom-Json
++    } else {
++        Write-RemediationLog "No detection results found, will perform full remediation" "WARNING"
++    }
++    
++    # 1. Install OneDrive if needed (skip if ConfigurationOnly)
++    if ($detectionResults.OneDriveInstalled -eq $false) {
++        if ($ConfigurationOnly) {
++            Write-RemediationLog "OneDrive not installed, but ConfigurationOnly mode is set - skipping installation" "WARNING"
++            Write-RemediationLog "OneDrive deployment should be handled separately" "INFO"
++            
++            # Exit early if OneDrive not installed and we're in ConfigurationOnly mode
++            Write-RemediationLog "Cannot configure OneDrive when it's not installed" "ERROR"
++            $script:exitCode = 1
++            
++            Write-RemediationLog "`nRemediation completed. Exit code: $script:exitCode"
++            
++            # Cleanup logging
++            if ($script:LoggingEnabled) {
++                try {
++                    Stop-UniversalTranscript -ErrorAction SilentlyContinue
++                }
++                catch {
++                    # Ignore transcript errors
++                }
++            }
++            
++            exit $script:exitCode
++        }
++        else {
++            Write-RemediationLog "OneDrive not installed - attempting installation..."
++            
++            # Download OneDrive installer
++            $installerUrl = "https://go.microsoft.com/fwlink/?linkid=844652"
++            $installerPath = "$env:TEMP\OneDriveSetup.exe"
++            
++            try {
++                Write-RemediationLog "Downloading OneDrive installer..."
++                Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
++                
++                Write-RemediationLog "Installing OneDrive..."
++                Start-Process -FilePath $installerPath -ArgumentList "/allusers" -Wait -NoNewWindow
++                
++                Write-RemediationLog "OneDrive installation completed" "SUCCESS"
++                
++                # Clean up installer
++                Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
++            }
++            catch {
++                Write-RemediationLog "Failed to install OneDrive: $_" "ERROR"
++                $script:remediationSuccess = $false
++            }
++        }
++    }
++    
++    # 2. Configure Group Policy settings
++    Write-RemediationLog "Configuring OneDrive Group Policy settings..."
++    
++    $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
++    
++    # Create policy key if it doesn't exist
++    if (!(Test-Path $policyPath)) {
++        New-Item -Path $policyPath -Force | Out-Null
++        Write-RemediationLog "Created policy registry key"
++    }
++    
++    # Configure tenant ID for KFM
++    Set-ItemProperty -Path $policyPath -Name "KFMSilentOptIn" -Value $TenantId -Type String
++    Write-RemediationLog "Configured tenant ID for KFM: $TenantId" "SUCCESS"
++    
++    # Enable Files On-Demand (Note: Already on by default since March 2024)
++    Set-ItemProperty -Path $policyPath -Name "FilesOnDemandEnabled" -Value 1 -Type DWord
++    Write-RemediationLog "Ensured Files On-Demand is enabled" "SUCCESS"
++    
++    # Check OneDrive version to determine Downloads folder support
++    $oneDrivePaths = @(
++        "$env:PROGRAMFILES\Microsoft OneDrive\OneDrive.exe",
++        "${env:PROGRAMFILES(x86)}\Microsoft OneDrive\OneDrive.exe",
++        "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDrive.exe"
++    )
++    
++    foreach ($path in $oneDrivePaths) {
++        if (Test-Path $path) {
++            $versionInfo = (Get-Item $path).VersionInfo
++            $oneDriveVersion = $versionInfo.FileVersion
++            Write-RemediationLog "OneDrive version: $oneDriveVersion"
++            
++            # Check if version supports Downloads folder KFM (23.002+)
++            $version = $oneDriveVersion.Split('.')
++            if ([int]$version[0] -gt 23 -or ([int]$version[0] -eq 23 -and [int]$version[1] -ge 2)) {
++                $script:supportsDownloadsKFM = $true
++                Write-RemediationLog "OneDrive version supports Downloads folder KFM"
++            } else {
++                Write-RemediationLog "OneDrive version does NOT support Downloads folder KFM (requires 23.002+)" "WARNING"
++            }
++            break
++        }
++    }
++    
++    # Configure KFM for folders based on version support
++    $kfmSettings = @{
++        "KFMSilentOptInDesktop" = 1
++        "KFMSilentOptInDocuments" = 1
++        "KFMSilentOptInPictures" = 1
++        "KFMBlockOptIn" = 0  # Ensure KFM is not blocked
++        "KFMBlockOptOut" = 1  # Prevent users from opting out
++    }
++    
++    # Only add Downloads if version supports it
++    if ($script:supportsDownloadsKFM) {
++        $kfmSettings["KFMSilentOptInDownloads"] = 1
++        Write-RemediationLog "Including Downloads folder in KFM configuration"
++    } else {
++        Write-RemediationLog "Skipping Downloads folder KFM (not supported by this OneDrive version)"
++    }
++    
++    foreach ($setting in $kfmSettings.GetEnumerator()) {
++        Set-ItemProperty -Path $policyPath -Name $setting.Key -Value $setting.Value -Type DWord
++        Write-RemediationLog "Set $($setting.Key) = $($setting.Value)"
++    }
++    
++    if ($script:supportsDownloadsKFM) {
++        Write-RemediationLog "KFM configured for all 4 folders" "SUCCESS"
++    } else {
++        Write-RemediationLog "KFM configured for 3 core folders (Desktop/Documents/Pictures)" "SUCCESS"
++        Write-RemediationLog "Downloads folder will be added when OneDrive is updated to 23.002+" "INFO"
++    }
++    
++    # 3. Additional optimization settings
++    Write-RemediationLog "Applying additional optimization settings..."
++    
++    # Prevent sync of certain file types
++    $excludedTypes = "*.pst;*.ost"
++    Set-ItemProperty -Path $policyPath -Name "FileSyncExcludedExtensions" -Value $excludedTypes -Type String
++    Write-RemediationLog "Excluded file types: $excludedTypes"
++    
++    # Set maximum file size (15GB)
++    Set-ItemProperty -Path $policyPath -Name "ForcedLocalMassDeleteDetection" -Value 1 -Type DWord
++    
++    # Enable automatic sign-in with Windows credentials
++    Set-ItemProperty -Path $policyPath -Name "SilentAccountConfig" -Value 1 -Type DWord
++    Write-RemediationLog "Enabled silent account configuration - users will auto-login with Windows credentials"
++    
++    # Disable personal OneDrive accounts (security setting)
++    Set-ItemProperty -Path $policyPath -Name "DisablePersonalSync" -Value 1 -Type DWord
++    Write-RemediationLog "Disabled personal OneDrive accounts - prevents data leakage to personal storage"
++    
++    # 4. Configure Storage Sense for automatic disk space management
++    $storageSenseSuccess = Configure-StorageSense -DaysUntilOnlineOnly $StorageSenseDays
++    if (-not $storageSenseSuccess) {
++        Write-RemediationLog "Storage Sense configuration failed - files will need manual conversion to online-only" "WARNING"
++    }
++    
++    # 5. Start OneDrive if not running
++    if ($detectionResults.OneDriveRunning -eq $false) {
++        Write-RemediationLog "OneDrive not running - attempting to start..."
++        
++        # Find OneDrive.exe
++        $oneDrivePaths = @(
++            "$env:PROGRAMFILES\Microsoft OneDrive\OneDrive.exe",
++            "${env:PROGRAMFILES(x86)}\Microsoft OneDrive\OneDrive.exe",
++            "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDrive.exe"
++        )
++        
++        $oneDriveExe = $null
++        foreach ($path in $oneDrivePaths) {
++            if (Test-Path $path) {
++                $oneDriveExe = $path
++                break
++            }
++        }
++        
++        if ($oneDriveExe) {
++            # Get logged-in user
++            $loggedInUser = (Get-WmiObject -Class Win32_ComputerSystem).UserName
++            if ($loggedInUser -and $loggedInUser -notmatch "^NT AUTHORITY") {
++                Write-RemediationLog "Starting OneDrive for user: $loggedInUser"
++                
++                # Create scheduled task to start OneDrive as user
++                $taskName = "StartOneDrive_Remediation"
++                $action = New-ScheduledTaskAction -Execute $oneDriveExe
++                $principal = New-ScheduledTaskPrincipal -UserId $loggedInUser -LogonType Interactive
++                $task = New-ScheduledTask -Action $action -Principal $principal
++                
++                Register-ScheduledTask -TaskName $taskName -InputObject $task -Force | Out-Null
++                Start-ScheduledTask -TaskName $taskName
++                
++                Start-Sleep -Seconds 5
++                Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
++                
++                Write-RemediationLog "OneDrive start initiated" "SUCCESS"
++            } else {
++                Write-RemediationLog "No interactive user found - OneDrive will start at next login" "WARNING"
++            }
++        } else {
++            Write-RemediationLog "OneDrive.exe not found after installation" "ERROR"
++            $script:remediationSuccess = $false
++        }
++    }
++    
++    # 6. Verify remediation
++    Write-RemediationLog "`n=== REMEDIATION SUMMARY ===" "INFO"
++    
++    # Check if all critical settings are in place
++    $verifySettings = @{
++        "KFMSilentOptIn" = $TenantId
++        "FilesOnDemandEnabled" = 1
++        "KFMSilentOptInDesktop" = 1
++        "KFMSilentOptInDocuments" = 1
++        "KFMSilentOptInPictures" = 1
++        "SilentAccountConfig" = 1
++        "DisablePersonalSync" = 1
++    }
++    
++    # Only verify Downloads if version supports it
++    if ($script:supportsDownloadsKFM) {
++        $verifySettings["KFMSilentOptInDownloads"] = 1
++    }
++    
++    $allConfigured = $true
++    foreach ($setting in $verifySettings.GetEnumerator()) {
++        $value = Get-ItemProperty -Path $policyPath -Name $setting.Key -ErrorAction SilentlyContinue
++        if ($value.$($setting.Key) -eq $setting.Value) {
++            Write-RemediationLog "$($setting.Key): Configured correctly" "SUCCESS"
++        } else {
++            Write-RemediationLog "$($setting.Key): NOT configured correctly" "ERROR"
++            $allConfigured = $false
++        }
++    }
++    
++    # Check Storage Sense
++    $storageSenseEnabled = Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\StorageSense" -Name "AllowStorageSenseGlobal" -ErrorAction SilentlyContinue
++    if ($storageSenseEnabled.AllowStorageSenseGlobal -eq 1) {
++        Write-RemediationLog "Storage Sense: Enabled" "SUCCESS"
++        Write-RemediationLog "Files will automatically convert to online-only after $StorageSenseDays days of non-use"
++    } else {
++        Write-RemediationLog "Storage Sense: Not enabled" "WARNING"
++    }
++    
++    if ($allConfigured -and $script:remediationSuccess) {
++        Write-RemediationLog "`nREMEDIATION SUCCESSFUL" "SUCCESS"
++        Write-RemediationLog "OneDrive is configured for disk space optimization"
++        Write-RemediationLog "Storage Sense will automatically free space by converting unused files to online-only"
++        Write-RemediationLog "Settings will take effect at next user login or policy refresh"
++        $script:exitCode = 0
++    } else {
++        Write-RemediationLog "`nREMEDIATION PARTIALLY SUCCESSFUL" "WARNING"
++        Write-RemediationLog "Some settings may require manual intervention"
++        $script:exitCode = 1
++    }
++    
++    # Force group policy update
++    Write-RemediationLog "`nForcing group policy update..."
++    & gpupdate /force /wait:0 2>&1 | Out-Null
++    Write-RemediationLog "Group policy update initiated"
++    
++    # Additional info about disk space savings
++    Write-RemediationLog "`n=== DISK SPACE OPTIMIZATION INFO ===" "INFO"
++    Write-RemediationLog "Files On-Demand: Enabled by default since OneDrive March 2024"
++    Write-RemediationLog "Storage Sense: Configured to run weekly"
++    Write-RemediationLog "Automatic conversion: Files unused for $StorageSenseDays days become online-only"
++    Write-RemediationLog "Manual conversion: Users can right-click files and select 'Free up space'"
++    Write-RemediationLog "Protected files: Files marked 'Always keep on this device' won't be converted"
++}
++catch {
++    Write-RemediationLog "CRITICAL ERROR during remediation: $_" "ERROR"
++    $script:exitCode = 1
++}
++
++Write-RemediationLog "`nRemediation completed. Exit code: $script:exitCode"
++
++# Only log path if not using logging module (which saves to its own location)
++if (-not $script:LoggingEnabled) {
++    Write-RemediationLog "Log saved to: $LogPath"
++}
++
++# Cleanup logging
++if ($script:LoggingEnabled) {
++    try {
++        Stop-UniversalTranscript -ErrorAction SilentlyContinue
++    }
++    catch {
++        # Ignore transcript errors
++    }
++}
++
++# Return exit code for RMM
++exit $script:exitCode
+\ No newline at end of file
+diff --git a/Scripts/Remediate-OneDriveConfiguration-RMM.ps1 b/Scripts/Remediate-OneDriveConfiguration-RMM.ps1
+index 8a05faf..65ce5c6 100644
+--- a/Scripts/Remediate-OneDriveConfiguration-RMM.ps1
++++ b/Scripts/Remediate-OneDriveConfiguration-RMM.ps1
+@@ -10,9 +10,19 @@
+     - Sets up automatic conversion of unused files to online-only
+     - Optionally installs OneDrive if missing (default behavior)
+     - Can run in ConfigurationOnly mode to skip installation
++.PARAMETER TenantId
++    Your organization's Azure AD Tenant ID (optional)
++    Example: "336dbee2-bd39-4116-b305-3105539e416f"
++    If not provided, script will auto-detect from device configuration
++    Auto-detection sources: Azure AD join, OneDrive registry, Group Policy
+ .PARAMETER ConfigurationOnly
+     When specified, skips OneDrive installation and only configures existing OneDrive.
+     Use this when OneDrive deployment is handled separately.
++.PARAMETER StorageSenseDays
++    Number of days before unused files are converted to online-only (default: 30)
++.PARAMETER SkipAutoDetection
++    Disables auto-detection and requires explicit TenantId parameter
++    Use this if you want to ensure a specific tenant ID is used
+ .NOTES
+     Designed to run from SYSTEM context via RMM
+     Storage Sense automates Files On-Demand to free disk space
+@@ -20,12 +30,16 @@
+ #>
+ 
+ param(
++    [Parameter(Mandatory = $false, HelpMessage = "Your Azure AD Tenant ID (e.g., 336dbee2-bd39-4116-b305-3105539e416f)")]
++    [ValidatePattern('^$|^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$')]
++    [string]$TenantId = "",
++    
+     [string]$LogPath = "$env:TEMP\OneDrive-Remediation-$(Get-Date -Format 'yyyyMMdd-HHmmss').log",
+     [string]$DetectionResultsPath = "$env:TEMP\OneDrive-Detection-Results.json",
+-    [string]$TenantId = "336dbee2-bd39-4116-b305-3105539e416f",
+     [int]$StorageSenseDays = 30,  # Days before converting files to online-only
+     [switch]$EnableDebug = $false,  # Enable console output for testing
+-    [switch]$ConfigurationOnly = $false  # Skip OneDrive installation, only configure existing
++    [switch]$ConfigurationOnly = $false,  # Skip OneDrive installation, only configure existing
++    [switch]$SkipAutoDetection = $false  # Skip auto-detection and require explicit TenantId
+ )
+ 
+ # Initialize
+@@ -184,6 +198,142 @@ function Configure-StorageSense {
+     }
+ }
+ 
++# Auto-detect Tenant ID if not provided (default behavior)
++if (-not $TenantId -and -not $SkipAutoDetection) {
++    Write-RemediationLog "No Tenant ID provided, attempting auto-detection..." "INFO"
++    
++    # Inline auto-detection function
++    function Get-AutoDetectedTenantID {
++        # Method 1: Azure AD Join Status (Most Reliable for unconfigured machines)
++        try {
++            $dsregOutput = & dsregcmd /status 2>$null
++            if ($dsregOutput) {
++                $dsregText = $dsregOutput -join "`n"
++                if ($dsregText -match 'TenantId\s*:\s*([a-fA-F0-9\-]{36})') {
++                    $tenantId = $matches[1]
++                    if ($tenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                        Write-RemediationLog "Tenant ID found via dsregcmd (Azure AD): $tenantId" "SUCCESS"
++                        return $tenantId
++                    }
++                }
++            }
++        }
++        catch {
++            Write-RemediationLog "dsregcmd check failed: $_" "DEBUG"
++        }
++        
++        # Method 2: Check existing user OneDrive configurations (for non-Azure AD joined)
++        # Since we're running as SYSTEM, check all user profiles
++        try {
++            $userProfiles = Get-ChildItem "C:\Users" -Directory -ErrorAction SilentlyContinue | 
++                Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
++            
++            foreach ($profile in $userProfiles) {
++                # Try to get SID for the user
++                try {
++                    $sid = $null
++                    # First try with domain prefix
++                    try {
++                        $sid = (New-Object System.Security.Principal.NTAccount("$env:COMPUTERNAME\$($profile.Name)")).Translate([System.Security.Principal.SecurityIdentifier]).Value
++                    }
++                    catch {
++                        # Try without domain prefix
++                        $sid = (New-Object System.Security.Principal.NTAccount($profile.Name)).Translate([System.Security.Principal.SecurityIdentifier]).Value
++                    }
++                    
++                    if ($sid) {
++                        $userRegPath = "Registry::HKEY_USERS\$sid\Software\Microsoft\OneDrive\Accounts\Business1"
++                        
++                        if (Test-Path $userRegPath) {
++                            $configuredTenantId = Get-ItemPropertyValue -Path $userRegPath -Name "ConfiguredTenantId" -ErrorAction SilentlyContinue
++                            if ($configuredTenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                                Write-RemediationLog "Tenant ID found in user profile ($($profile.Name)): $configuredTenantId" "SUCCESS"
++                                return $configuredTenantId
++                            }
++                        }
++                    }
++                }
++                catch {
++                    Write-RemediationLog "Could not check profile $($profile.Name): $_" "DEBUG"
++                }
++            }
++            
++            # If running as user (not SYSTEM), also check HKCU
++            if ($env:USERNAME -ne 'SYSTEM') {
++                $regPath = "HKCU:\Software\Microsoft\OneDrive\Accounts\Business1"
++                if (Test-Path $regPath) {
++                    $configuredTenantId = Get-ItemPropertyValue -Path $regPath -Name "ConfiguredTenantId" -ErrorAction SilentlyContinue
++                    if ($configuredTenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                        Write-RemediationLog "Tenant ID found in current user registry: $configuredTenantId" "SUCCESS"
++                        return $configuredTenantId
++                    }
++                }
++            }
++        }
++        catch {
++            Write-RemediationLog "User profile registry check failed: $_" "DEBUG"
++        }
++        
++        # Method 3: Check Office 365 identity (if Office is installed)
++        try {
++            $officePaths = @(
++                "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration",
++                "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Office\ClickToRun\Configuration"
++            )
++            
++            foreach ($path in $officePaths) {
++                if (Test-Path $path) {
++                    $o365Config = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue
++                    if ($o365Config.TenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                        Write-RemediationLog "Tenant ID found in Office 365 configuration: $($o365Config.TenantId)" "SUCCESS"
++                        return $o365Config.TenantId
++                    }
++                }
++            }
++        }
++        catch {
++            Write-RemediationLog "Office 365 configuration check failed: $_" "DEBUG"
++        }
++        
++        # Method 4: OneDrive Group Policy (LAST - might be from our own configuration)
++        try {
++            $policyPath = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
++            if (Test-Path $policyPath) {
++                $kfmTenantId = Get-ItemPropertyValue -Path $policyPath -Name "KFMSilentOptIn" -ErrorAction SilentlyContinue
++                if ($kfmTenantId -match '^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$') {
++                    Write-RemediationLog "Tenant ID found in OneDrive policy (might be from previous run): $kfmTenantId" "WARNING"
++                    return $kfmTenantId
++                }
++            }
++        }
++        catch {
++            Write-RemediationLog "OneDrive policy check failed: $_" "DEBUG"
++        }
++        
++        return $null
++    }
++        
++    $detectedTenantId = Get-AutoDetectedTenantID
++    if ($detectedTenantId) {
++        $TenantId = $detectedTenantId
++        Write-RemediationLog "Auto-detected Tenant ID: $TenantId" "SUCCESS"
++    }
++    else {
++        Write-RemediationLog "Failed to auto-detect Tenant ID" "ERROR"
++        Write-RemediationLog "Please provide Tenant ID using -TenantId parameter" "ERROR"
++        Write-RemediationLog "Find your Tenant ID in Azure AD portal or use: (Get-AzureADTenantDetail).ObjectId" "INFO"
++        $script:exitCode = 1
++        exit $script:exitCode
++    }
++}
++elseif (-not $TenantId -and $SkipAutoDetection) {
++    Write-RemediationLog "No Tenant ID provided and auto-detection is disabled" "ERROR"
++    Write-RemediationLog "Please provide -TenantId parameter" "ERROR"
++    Write-RemediationLog "Example: .\$($MyInvocation.MyCommand.Name) -TenantId 'your-tenant-id'" "INFO"
++    $script:exitCode = 1
++    exit $script:exitCode
++}
++
+ # These are already logged by the logging module initialization above
+ if (-not $script:LoggingEnabled) {
+     Write-RemediationLog "Starting OneDrive configuration remediation with Storage Sense"
+@@ -340,6 +490,10 @@ try {
+     Set-ItemProperty -Path $policyPath -Name "SilentAccountConfig" -Value 1 -Type DWord
+     Write-RemediationLog "Enabled silent account configuration - users will auto-login with Windows credentials"
+     
++    # Disable personal OneDrive accounts (security setting)
++    Set-ItemProperty -Path $policyPath -Name "DisablePersonalSync" -Value 1 -Type DWord
++    Write-RemediationLog "Disabled personal OneDrive accounts - prevents data leakage to personal storage"
++    
+     # 4. Configure Storage Sense for automatic disk space management
+     $storageSenseSuccess = Configure-StorageSense -DaysUntilOnlineOnly $StorageSenseDays
+     if (-not $storageSenseSuccess) {
+@@ -403,6 +557,8 @@ try {
+         "KFMSilentOptInDesktop" = 1
+         "KFMSilentOptInDocuments" = 1
+         "KFMSilentOptInPictures" = 1
++        "SilentAccountConfig" = 1
++        "DisablePersonalSync" = 1
+     }
+     
+     # Only verify Downloads if version supports it
