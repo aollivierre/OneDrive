@@ -87,3 +87,4 @@ docs/_site/
 /create-github-repo.ps1
 github_token.txt
 pat_token.txt
+git-diff.txt
