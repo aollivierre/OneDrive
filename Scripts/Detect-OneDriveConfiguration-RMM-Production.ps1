@@ -65,67 +65,86 @@ $script:outputData = @{
 }
 
 #region Logging Module Configuration
-# Import logging module - use local copy only
-$LoggingModulePath = Join-Path $PSScriptRoot "logging\logging.psm1"
-$script:LoggingEnabled = $false
+# FOR PRODUCTION RMM DEPLOYMENT:
+# 1. Comment out or remove the Import-Module section below (lines marked with #REMOVE-FOR-RMM)
+# 2. Insert the entire contents of logging.psm1 into the #region Embedded Logging Module below
+# 3. Keep the Initialize-Logging and logging setup code
+
+#REMOVE-FOR-RMM# Import logging module - use local copy only
+#REMOVE-FOR-RMM $LoggingModulePath = Join-Path $PSScriptRoot "logging\logging.psm1"
+#REMOVE-FOR-RMM $script:LoggingEnabled = $false
+#REMOVE-FOR-RMM $script:LoggingMode = if ($EnableDebug) { 'EnableDebug' } else { 'SilentMode' }
+#REMOVE-FOR-RMM 
+#REMOVE-FOR-RMM if (Test-Path $LoggingModulePath) {
+#REMOVE-FOR-RMM     try {
+#REMOVE-FOR-RMM         if ($EnableDebug) {
+#REMOVE-FOR-RMM             Write-Host "[DEBUG] Found logging module at: $LoggingModulePath" -ForegroundColor Cyan
+#REMOVE-FOR-RMM         }
+#REMOVE-FOR-RMM         
+#REMOVE-FOR-RMM         Import-Module $LoggingModulePath -Force -WarningAction SilentlyContinue
+#REMOVE-FOR-RMM         $script:LoggingEnabled = $true
+
+#region Embedded Logging Module
+# PASTE THE ENTIRE CONTENTS OF logging.psm1 HERE FOR RMM DEPLOYMENT
+# START PASTE
+
+
+# END PASTE
+#endregion Embedded Logging Module
+
+# After embedding the module above, these lines will work:
+$script:LoggingEnabled = $true
 $script:LoggingMode = if ($EnableDebug) { 'EnableDebug' } else { 'SilentMode' }
 
-if (Test-Path $LoggingModulePath) {
-    try {
-        if ($EnableDebug) {
-            Write-Host "[DEBUG] Found logging module at: $LoggingModulePath" -ForegroundColor Cyan
-        }
-        
-        Import-Module $LoggingModulePath -Force -WarningAction SilentlyContinue
-        $script:LoggingEnabled = $true
-        
-        if ($EnableDebug) {
-            Write-Host "[DEBUG] Logging module imported successfully" -ForegroundColor Cyan
-            Write-Host "[DEBUG] LoggingMode: $script:LoggingMode" -ForegroundColor Cyan
-        }
-        
-        # Initialize logging
-        Initialize-Logging -BaseLogPath "C:\ProgramData\OneDriveDetection\Logs" `
-                          -JobName "OneDriveDetection" `
-                          -ParentScriptName "Detect-OneDriveConfiguration-RMM"
-        
-        # Set global EnableDebug for logging module
-        $global:EnableDebug = $EnableDebug
-        
-        if ($EnableDebug) {
-            Write-Host "[DEBUG] Logging initialized. Global EnableDebug = $($global:EnableDebug)" -ForegroundColor Cyan
-        }
-        
-        # Test direct call with debug
-        if ($EnableDebug) {
-            Write-Host "[DEBUG TEST] About to call Write-AppDeploymentLog with Mode: $script:LoggingMode" -ForegroundColor Yellow
-            Write-Host "[DEBUG TEST] Global EnableDebug: $($global:EnableDebug)" -ForegroundColor Yellow
-        }
-        
-        Write-AppDeploymentLog -Message "OneDrive Detection Script Started" -Level "INFO" -Mode $script:LoggingMode
-        Write-AppDeploymentLog -Message "Computer: $env:COMPUTERNAME" -Level "INFO" -Mode $script:LoggingMode
-        
-        # Get user context
-        $userContext = Get-CurrentUser
-        Write-AppDeploymentLog -Message "User: $($userContext.UserName) (Type: $($userContext.UserType))" -Level "INFO" -Mode $script:LoggingMode
-        
-        if ($EnableDebug) {
-            Write-Host "[DEBUG] First log messages written" -ForegroundColor Cyan
-        }
-    }
-    catch {
-        $script:LoggingEnabled = $false
-        if ($EnableDebug) {
-            Write-Host "[DEBUG ERROR] Logging initialization failed: $_" -ForegroundColor Red
-            Write-Host "[DEBUG ERROR] Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
-        }
-    }
+#REMOVE-FOR-RMM         
+#REMOVE-FOR-RMM         if ($EnableDebug) {
+#REMOVE-FOR-RMM             Write-Host "[DEBUG] Logging module imported successfully" -ForegroundColor Cyan
+#REMOVE-FOR-RMM             Write-Host "[DEBUG] LoggingMode: $script:LoggingMode" -ForegroundColor Cyan
+#REMOVE-FOR-RMM         }
+
+# Initialize logging - KEEP THIS for production
+Initialize-Logging -BaseLogPath "C:\ProgramData\OneDriveDetection\Logs" `
+                  -JobName "OneDriveDetection" `
+                  -ParentScriptName "Detect-OneDriveConfiguration-RMM"
+
+# Set global EnableDebug for logging module
+$global:EnableDebug = $EnableDebug
+
+if ($EnableDebug) {
+    Write-Host "[DEBUG] Logging initialized. Global EnableDebug = $($global:EnableDebug)" -ForegroundColor Cyan
 }
-else {
-    if ($EnableDebug) {
-        Write-Host "[DEBUG WARNING] Logging module not found at: $LoggingModulePath" -ForegroundColor Yellow
-    }
+
+# Test direct call with debug
+if ($EnableDebug) {
+    Write-Host "[DEBUG TEST] About to call Write-AppDeploymentLog with Mode: $script:LoggingMode" -ForegroundColor Yellow
+    Write-Host "[DEBUG TEST] Global EnableDebug: $($global:EnableDebug)" -ForegroundColor Yellow
 }
+
+Write-AppDeploymentLog -Message "OneDrive Detection Script Started" -Level "INFO" -Mode $script:LoggingMode
+Write-AppDeploymentLog -Message "Computer: $env:COMPUTERNAME" -Level "INFO" -Mode $script:LoggingMode
+
+# Get user context
+$userContext = Get-CurrentUser
+Write-AppDeploymentLog -Message "User: $($userContext.UserName) (Type: $($userContext.UserType))" -Level "INFO" -Mode $script:LoggingMode
+
+if ($EnableDebug) {
+    Write-Host "[DEBUG] First log messages written" -ForegroundColor Cyan
+}
+
+#REMOVE-FOR-RMM     }
+#REMOVE-FOR-RMM     catch {
+#REMOVE-FOR-RMM         $script:LoggingEnabled = $false
+#REMOVE-FOR-RMM         if ($EnableDebug) {
+#REMOVE-FOR-RMM             Write-Host "[DEBUG ERROR] Logging initialization failed: $_" -ForegroundColor Red
+#REMOVE-FOR-RMM             Write-Host "[DEBUG ERROR] Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
+#REMOVE-FOR-RMM         }
+#REMOVE-FOR-RMM     }
+#REMOVE-FOR-RMM }
+#REMOVE-FOR-RMM else {
+#REMOVE-FOR-RMM     if ($EnableDebug) {
+#REMOVE-FOR-RMM         Write-Host "[DEBUG WARNING] Logging module not found at: $LoggingModulePath" -ForegroundColor Yellow
+#REMOVE-FOR-RMM     }
+#REMOVE-FOR-RMM }
 #endregion
 
 #region Helper Functions
