@@ -88,8 +88,12 @@ docs/_site/
 github_token.txt
 pat_token.txt
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 git-diff.txt
 =======
 >>>>>>> Stashed changes
 nul
 git-diff.txt
+=======
+nul
+>>>>>>> Stashed changes
